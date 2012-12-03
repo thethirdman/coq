@@ -72,6 +72,12 @@ val get_options : (option_name * option_state) list call
     to check that everything is correct. *)
 val set_options : (option_name * option_value) list -> unit call
 
+(** Locate an identifier with a "relative" path. Returns its "absolute" version
+ * in an option type. This should be composed of a hierarchy of file.module.name
+ * If the return value is None, the identifier has not been found.
+ *)
+val locate : string -> string option call
+
 (** Quit gracefully the interpreter. *)
 val quit : unit call
 
@@ -92,6 +98,7 @@ type handler = {
   mkcases : string -> string list list;
   quit : unit -> unit;
   about : unit -> coq_info;
+  locate : string -> string option;
   handle_exn : exn -> location * string;
 }
 

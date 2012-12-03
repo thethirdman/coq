@@ -36,6 +36,7 @@ type 'a call =
   | MkCases of string
   | Quit
   | About
+  | Locate of string
 
 type unknown
 
@@ -56,6 +57,7 @@ type handler = {
   mkcases : string -> string list list;
   quit : unit -> unit;
   about : unit -> coq_info;
+  locate : string -> string option;
   handle_exn : exn -> location * string;
 }
 
@@ -73,6 +75,7 @@ let inloadpath s : bool call = InLoadPath s
 let mkcases s : string list list call = MkCases s
 let search flags : string coq_object list call = Search flags
 let quit : unit call = Quit
+let locate s : string option call = Locate s
 
 (** * Coq answers to CoqIde *)
 
@@ -99,6 +102,7 @@ let abstract_eval_call handler c =
             | MkCases s -> Obj.magic (handler.mkcases s : string list list)
             | Quit -> Obj.magic (handler.quit () : unit)
             | About -> Obj.magic (handler.about () : coq_info)
+            | Locate s -> Obj.magic (handler.locate s : string option)
           in Good res
   with e ->
     let (l, str) = handler.handle_exn e in
@@ -319,6 +323,8 @@ let of_call = function
   Element ("call", ["val", "quit"], [])
 | About ->
   Element ("call", ["val", "about"], [])
+| Locate s ->
+  Element ("call", ["val", "locate"], [PCData s])
 
 let to_call = function
 | Element ("call", attrs, l) ->
@@ -346,6 +352,7 @@ let to_call = function
   | "hints" -> Hints
   | "quit" -> Quit
   | "about" -> About
+  | "locate" -> Locate (raw_string l)
   | _ -> raise Marshal_error
   end
 | _ -> raise Marshal_error
@@ -488,6 +495,7 @@ let expected_answer_type = function
   | MkCases _ -> List (List String)
   | Quit -> Unit
   | About -> Coq_info
+  | Locate _ -> Option String
 
 let of_answer (q : 'a call) (r : 'a value) : xml =
   let rec convert ty : 'a -> xml = match ty with
@@ -565,6 +573,7 @@ let pr_call = function
   | MkCases s -> "MKCASES "^s
   | Quit -> "QUIT"
   | About -> "ABOUT"
+  | Locate s -> "LOCATE"^s
 
 let pr_value_gen pr = function
   | Good v -> "GOOD " ^ pr v
@@ -634,4 +643,5 @@ let pr_full_value call value =
     | MkCases s -> pr_value_gen pr_mkcases (Obj.magic value : string list list value)
     | Quit -> pr_value value
     | About -> pr_value value
+    | Locate s -> pr_value_gen pr_string (Obj.magic value : string value)
 

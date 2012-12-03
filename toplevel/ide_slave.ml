@@ -269,6 +269,21 @@ let about () = {
   Interface.release_date = Coq_config.date;
   Interface.compile_date = Coq_config.compile_date;
 }
+(** Locates an identifier. See serialize.ml for more details. We forge a
+ * symbol from the string, and we apply a method similar to
+ * Vernacentries.dump_global, finally transforming the absolute identifier into
+ * a string
+ *)
+let locate s =
+  try
+    Some
+      (Libnames.string_of_path
+        (Nametab.path_of_global
+          (Smartlocate.smart_global
+            (Misctypes.AN (Libnames.Ident (Loc.ghost,(Names.id_of_string
+            s)))))))
+  with Loc.Exc_located (_,Nametab.GlobalizationError q) -> None
+
 
 (** When receiving the Quit call, we don't directly do an [exit 0],
     but rather set this reference, in order to send a final answer
@@ -317,6 +332,7 @@ let eval_call c =
     Serialize.mkcases = interruptible Vernacentries.make_cases;
     Serialize.quit = (fun () -> quit := true);
     Serialize.about = interruptible about;
+    Serialize.locate = interruptible locate;
     Serialize.handle_exn = handle_exn; }
   in
   (* If the messages of last command are still there, we remove them *)
