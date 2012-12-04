@@ -76,7 +76,7 @@ PLUGINS:=\
 
 SRCDIRS:=\
   $(CORESRCDIRS)  \
-  tools 	tools/coqdoc 	scripts	\
+  tools 	tools/coqdoc tools/coqdoc-ng/src scripts	\
   $(addprefix plugins/, $(PLUGINS))
 
 IDESRCDIRS:=\

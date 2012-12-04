@@ -1,0 +1,246 @@
+===============================================================================
+  Réunion du 07 novermbe
+===============================================================================
+
+  - Faire un type dédié pour la transformation de l'AST de coq. Celui ci
+    doit avoir les propriétés suivantes:
+      - Contenir des informations de mise en fomes (notamment des box)
+      - Avoir une représentation plus hiérarchisées que l'AST (notamment
+        des genres de catégories)
+  - Fonctoriser Pp de façon à pouvoir soit pretty printer l'ast de coq
+    soit construire _notre_ type pour le xml
+  - Faire une traduction de notre type vers le type Vdoc du coté coqdoc.
+    Possiblement enrichir le type vdoc
+
+  Idée:
+    type 'a pretty =
+      {before: string; after:string; sep:string;
+       nodes : 'a list}
+
+     type 'a proof =
+        ProofBlock of ('a proof) pretty
+      | ProofTerm of string pretty
+      | ...
+
+     type ('a)* cst =
+        Proof of ('a)*|_ Proof (* Soit un type 'a, soit un type direct ?? *)
+      | ...
+
+===============================================================================
+  Réunion du 30 octobre
+===============================================================================
+
+  - On veut faire une surcouche au pretty print pour avoir
+    1) du layout 2) une conservation de la sémantique de l'ast. La solution
+    est donc de passer de 'a -> string à type 'a -> ('a string) (avec une
+    version recursive)
+  - Commande locate: ok pour les variables globales, ok pour les modules ...
+    Faire d'autres tests avec les gens qui savent coder en coq
+  - Démoniser coqtop ?
+
+===============================================================================
+  Réunion du 24 octobre
+===============================================================================
+
+  - Refaire le type AST avec des variants polymorphes:
+      - "le caractère '`' à la rescousse", jfla 2008
+      - Jacques garrigues: variant reuse,
+
+  - Implémenter parse avec deux niveaux:
+      - Bas niveau: just au dessus du lexer, on veut seulement décorer
+        la chaîne données (keyword, literal ...)
+      - Haut niveau: reflexion, on veut à terme avoir suffisamment
+        d'informations pour pouvoir créer des hooks à partir du résultat
+        de parse. Regarde comment fait Isabella
+
+  Questions:
+    - Résolution de noms ? avoir une fonction du protocole
+      (nom relatif -> nom absolu). Réfléchir également à la gestion d'un
+      ensemble de fichiers en entrées, à la structuration des fichiers de
+      sortie, et également à ce qu'il pourrait y avoir d'autre comme éléments
+      repartis sur plusieurs fichiers (autre chose que des symboles ?)
+
+===============================================================================
+  Réunion du 16 octobre
+===============================================================================
+
+  François a bloqué sur le rôle de l'AST dans notre chaîne. Plus
+  précisément, il l'a trouvé trop abstrait : n'est-il pas étrange de
+  passer d'un
+
+  - CST (censé représenter la structure du document)
+
+  - à un AST ne contenant plus qu'une distinction entre documents et
+  requêtes, ne faisant plus apparaître de détails liés au document
+
+  pour repasser ensuite à un CST servant à produire le document final?
+
+  Effectivement, il serait étrange de perdre la structure du document
+  initial pendant la phase de résolution des requêtes. La phase
+  d'abstraction ne doit donc pas être implémentée à l'aide d'un nouveau type
+  "ast" mais par sous-typage.
+
+  On suppose que le type des documents contient des noeuds "query" que la
+  phase de résolution des requêtes va éliminer.
+
+  Les phases de coqdoc sont alors :
+
+  1. Analyse syntaxique
+     Entrée : les fichiers sources
+     Sortie : arbre de syntaxe pour le document, contenant des noeuds "query".
+
+  2. Résolution des requêtes
+     Entrée : arbre de syntaxe du document produit par les phases précédentes.
+     Sortie : arbre de syntaxe où les requêtes ont été résolues.
+
+  3. Production du document
+     Entrées : arbre de syntaxe du document et ensemble d'afficheurs
+     Sortie : le document dans son format final.
+
+  À faire : un prototype qui suit cette structure.
+
+===============================================================================
+ Reunion du 3 Octobre
+===============================================================================
+
+  Après la phase de conception du CST, on désire concevoir la suite. Cette
+  réunion s'est concentrée sur la phase entre le CST et le Vdoc, et
+  définit les bases de ce que contiendra le .vdoc:
+    - Après le CST, on désire générer un AST qui représente un document
+      à trous, et qui est composé de requêtes structurant ces trous
+      (let, print, seq, ...). L'objectif à partir de cet AST est de générer
+      un .vdoc contenant des informations de structure pour le document de
+      sortie (Refman, manpage, documentation de code, ...). Celui-ci doit être
+      générique sur l'aspect format de sortie (pdf, html, ...).
+    type t =
+      DocChunk : (t* -> t) -> t
+      | let : name -> request -> t -> t
+      | print : (context -> name -> t) -> name -> t
+      | Seq ...
+
+      context =  name * t
+  L'objectif de la semaine est de poser une première version de cette
+  structure, et de commencer à esquisser la chaine de compilation suivante:
+    CST -> AST -> Vdoc -> .output
+
+===============================================================================
+ Reunion du 26 septembre
+===============================================================================
+
+Parser/Lexer:
+  - On veut réimplémenter un parser/lexer créant un CST qui sera évalué.
+
+===============================================================================
+ Reunion du 19 Septembre
+===============================================================================
+
+Retour de parse: Location x Metadata
+
+  (metadata est pour l'instant du unit, l'objectif à terme est qu'il soit
+  un conteneur nous permettant d'inclure des informations venant des AST, et
+  également d'autres informations telles que les mots clefs (venant soit d'un
+  CST, soit du parser/lexer modifié)
+
+Il a également été question de rajouter des __requêtes__ nous permettant
+d'obtenir:
+  1 - le résultat de l'évaluation de la commande envoyée par parse
+  2 - l'état de coq suite à l'interpétation de cette commande
+
+1: L'objectif est d'obtenir le résultat d'une commande parsée, sans avoir à
+  renvoyer cette commande. Deux approches sont possible:
+    - On garde un historique coté coq, qui nous permettrait de demander
+      l'évaluation d'une chaine parsée.
+    - On récupère les métadatas correspondant à la chaîne parsée, et également
+      le résultat de son évaluation coté coqdoc. Cela a l'avantage d'être
+      moins instrusif coté coq (pas d'historique à tenir, etc ...), tout en
+      offrant les mêmes possibilités à l'utilisateur. Il faut cependant
+      donner le contrôle à l'utilisateur concernant l'évaluation d'une requête
+      parse (A discuter)
+
+2: Cela m'apparait comme flou (qu'est ce que l'état de coq ??). Cependant,
+  il existe déjà certaines requêtes qui rentrent dans cette définition:
+    - goals, qui nous permettent de connaitre les buts d'une preuve en cours
+    - evars, nous informant sur les variables existentielles définies
+    - hints, permettant d'obtenir les preuves applicables à l'état courant
+    - status, donnant le statut de coq (comme le décrit le commentaire de
+      serialize.mli "ready in some section, proving Foo")
+
+Objectifs:
+  - Finir l'interaction XML (implem le type présenté ci-dessus)
+  - Commencer à concevoir le front-end, notamment en liant commentaires et
+    le code source associé
+
+Idées:
+  - Mettre un hook si des fichiers concernant Yann sont mis à jours (tout ce
+    qui est .txt notamment), qui lui enverrait un email.
+
+
+===============================================================================
+ Reunion du 14 septembre
+===============================================================================
+
+Nouvelle commande: parse
+
+parse: str (deviendrait un chunk plus tard) -> annotated_feedback
+
+type annotated_feedback = | Parse_error
+                          | Sentence
+
+type sentence = { end : int | int X int (depends on relative or absolute pos)
+                  kind: |Vernac |Gallina |Tac
+                  markup: annotation list}
+
+type annotation = { Pos X {Keyword | Ref const | Declared const}
+
+Dans l'ideal: Ecrire un CST
+
+
+      ___Pretty Print__
+      |                |
+      |                |
+    Source ---------> CST ---------> Vernac Expr
+
+
+Requete:
+  -> Fin de phrase
+  -> Type de phrase
+  -> Ensemble des buts résolus
+
+
+Utilité d'un mode asynchrone ??
+
+===============================================================================
+ Reunion du 3 septembre
+===============================================================================
+
+Fonctionnement actuel :
+                                | html
+ - Code source (.v) | coqdoc    | latex
+ - .glob            |---------->| manpage
+
+Cas d'utilisation pour coq :
+  - Doc de dev
+  - Man page
+  - Literate programming (RTFM)
+  - Ecriture papers
+  - Documentation interactive (avec javascript & co)
+  - What else ... ?
+
+Qualitatif :
+  - Utilisation des infos récoltées pas le compilateur
+    pour générer la doc
+
+design de coqdoc :
+
+                 _______
+                 |      |
+  .v    |        |     .v
+  .tex  |----> .vdoc /
+  .vdoc |            \ .html
+  .html |
+
+  .vdoc : fichier de doc pour coq, se sert des infos de compil
+
+
+  Gallina :
+    Idée d'enrichir le .vo avec des metadatas relatives au code (genre symboles)
