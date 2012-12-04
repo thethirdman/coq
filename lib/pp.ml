@@ -464,3 +464,175 @@ let prvect_with_sep sep elem v = prvecti_with_sep sep (fun _ -> elem) v
 let prvect elem v = prvect_with_sep mt elem v
 
 let surround p = hov 1 (str"(" ++ p ++ str")")
+
+
+let explicit = ref false
+
+type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
+    | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
+    | C_UnpCut | C_Generalization | C_Name | C_GlobSort | C_CHole
+    | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl | C_CRef
+    | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
+    | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
+    | C_CSort | C_CCast | C_CGeneralization | C_CDelimiters | C_CPrim
+    | V_AbortAll | V_Restart | V_Unfocus | V_Unfocused | V_Goal | V_Abort
+    | V_Undo | V_UndoTo | V_Backtrack | V_Focus | V_Show | V_CheckGuard
+    | V_ResetName | V_ResetInitial | V_Back | V_BackTo | V_WriteState
+    | V_RestoreState | V_List | V_Load | V_Time | V_Timeout | V_Fail
+    | V_TacticNotation | V_OpenCloseScope | V_Delimiters | V_BindScope
+    | V_ArgumentScope | V_Infix | V_Notation | V_SyntaxExtension
+    | V_Definition | V_StartTheoremProof | V_EndProof | V_ExactProof
+    | V_Assumption | V_Inductive | V_Fixpoint | V_CoFixpoint | V_Scheme
+    | V_CombinedScheme | V_BeginSection | V_EndSegment | V_Require | V_Import
+    | V_Canonical | V_Coercion | V_IdentityCoercion | V_Instance | V_Context
+    | V_DeclareInstances | V_DeclareClass | V_DefineModule | V_DeclareModule
+    | V_DeclareModuleType | V_Include | V_Solve | V_SolveExistential
+    | V_RequireFrom | V_AddLoadPath | V_RemoveLoadPath | V_AddMLPath
+    | V_DeclareMLModule | V_Chdir | V_DeclareTacticDefinition | V_CreateHintDb
+    | V_RemoveHints | V_Hints | V_SyntacticDefinition | V_DeclareImplicits
+    | V_Arguments | V_Reserve | V_Generalizable | V_SetOpacity | V_UnsetOption
+    | V_SetOption | V_AddOption | V_RemoveOption | V_MemOption | V_PrintOption
+    | V_CheckMayEval | V_GlobalCheck | V_DeclareReduction | V_Print | V_Locate
+    | V_Comments | V_ToplevelControl | V_Extend | V_Proof | V_ProofMode
+    | V_Subproof | V_EndSubproof | V_Search | V_Bullet
+
+let handle context elt =
+  if not !explicit then elt
+  else
+    let lop = "<" and rop = "</" and closing = ">" in
+    let name = match context with
+    | C_CNotation -> "notation"
+    | C_Id -> "id"
+    | C_Ref -> "ref"
+    | C_UnpMetaVar -> "unpmetavar"
+    | C_UnpListMetaVar -> "unplistmetavar"
+    | C_UnpBinderListMetaVar -> "unpbinderlistmetavar"
+    | C_UnpTerminal -> "unpterminal"
+    | C_UnpBox -> "unpbox"
+    | C_UnpCut -> "unpcut"
+    | C_Generalization -> "generalization"
+    | C_Name   -> "name"
+    | C_GlobSort -> "globsort"
+    | C_CHole -> "hole"
+    | C_Explicitation -> "explicitation"
+    | C_Qualid -> "qualid"
+    | C_Patt -> "patt"
+    | C_Binder -> "binder"
+    | C_RecDecl -> "recdecl"
+    | C_CRef -> "ref"
+    | C_CFix -> "fix"
+    | C_CCoFix -> "cofix"
+    | C_CProdN -> "prodn"
+    | C_CLambdaN -> "lambdan"
+    | C_CLetIn -> "letin"
+    | C_CAppExpl -> "appexpl"
+    | C_CApp -> "app"
+    | C_CRecord -> "record"
+    | C_CCases -> "cases"
+    | C_CLetTuple -> "lettuple"
+    | C_CIf -> "if"
+    | C_CEvar -> "evar"
+    | C_CPatVar -> "patvar"
+    | C_CSort -> "sort"
+    | C_CCast -> "cast"
+    | C_CGeneralization -> "generalization"
+    | C_CDelimiters -> "delimiters"
+    | C_CPrim -> "prim"
+    | V_AbortAll -> "abortall"
+    | V_Restart -> "restart"
+    | V_Unfocus -> "unfocus"
+    | V_Unfocused -> "unfocused"
+    | V_Goal -> "goal"
+    | V_Abort -> "abort"
+    | V_Undo -> "undo"
+    | V_UndoTo -> "undoto"
+    | V_Backtrack -> "backtrack"
+    | V_Focus -> "focus"
+    | V_Show -> "show"
+    | V_CheckGuard -> "checkguard"
+    | V_ResetName -> "resetname"
+    | V_ResetInitial -> "resetinitial"
+    | V_Back -> "back"
+    | V_BackTo -> "backto"
+    | V_WriteState -> "writestate"
+    | V_RestoreState -> "restorestate"
+    | V_List -> "list"
+    | V_Load -> "load"
+    | V_Time -> "time"
+    | V_Timeout -> "timeout"
+    | V_Fail -> "fail"
+    | V_TacticNotation -> "tacticnotation"
+    | V_OpenCloseScope -> "openclosescope"
+    | V_Delimiters -> "delimiters"
+    | V_BindScope -> "bindscope"
+    | V_ArgumentScope -> "argumentscope"
+    | V_Infix -> "infix"
+    | V_Notation -> "notation"
+    | V_SyntaxExtension -> "syntaxextension"
+    | V_Definition -> "definition"
+    | V_StartTheoremProof -> "starttheoremproof"
+    | V_EndProof -> "endproof"
+    | V_ExactProof -> "exactproof"
+    | V_Assumption -> "assumption"
+    | V_Inductive -> "inductive"
+    | V_Fixpoint -> "fixpoint"
+    | V_CoFixpoint -> "cofixpoint"
+    | V_Scheme -> "scheme"
+    | V_CombinedScheme -> "combinedscheme"
+    | V_BeginSection -> "beginsection"
+    | V_EndSegment -> "endsegment"
+    | V_Require -> "require"
+    | V_Import -> "import"
+    | V_Canonical -> "canonical"
+    | V_Coercion -> "coercion"
+    | V_IdentityCoercion -> "identitycoercion"
+    | V_Instance -> "instance"
+    | V_Context -> "context"
+    | V_DeclareInstances -> "declareinstances"
+    | V_DeclareClass -> "declareclass"
+    | V_DefineModule -> "definemodule"
+    | V_DeclareModule -> "declaremodule"
+    | V_DeclareModuleType -> "declaremoduletype"
+    | V_Include -> "include"
+    | V_Solve -> "solve"
+    | V_SolveExistential -> "solveexistential"
+    | V_RequireFrom -> "requiefrom"
+    | V_AddLoadPath -> "addloadpath"
+    | V_RemoveLoadPath -> "removeloadpath"
+    | V_AddMLPath -> "addmlpath"
+    | V_DeclareMLModule -> "declaremlmodule"
+    | V_Chdir -> "chdir"
+    | V_DeclareTacticDefinition -> "declaretacticdefinition"
+    | V_CreateHintDb -> "createhintdb"
+    | V_RemoveHints -> "removehints"
+    | V_Hints -> "hints"
+    | V_SyntacticDefinition -> "syntacticdefinition"
+    | V_DeclareImplicits -> "declareimplicits"
+    | V_Arguments -> "arguments"
+    | V_Reserve -> "reserve"
+    | V_Generalizable -> "generalizable"
+    | V_SetOpacity -> "setopacity"
+    | V_UnsetOption -> "unsetoption"
+    | V_SetOption -> "setoption"
+    | V_AddOption -> "addoption"
+    | V_RemoveOption -> "removeoption"
+    | V_MemOption -> "memoption"
+    | V_PrintOption -> "printoption"
+    | V_CheckMayEval -> "checkmayeval"
+    | V_GlobalCheck -> "globalcheck"
+    | V_DeclareReduction -> "declarereduction"
+    | V_Print -> "print"
+    | V_Locate -> "locate"
+    | V_Comments -> "comments"
+    | V_ToplevelControl -> "toplevelcontrol"
+    | V_Extend -> "extend"
+    | V_Proof -> "proof"
+    | V_ProofMode -> "proofmode"
+    | V_Subproof -> "subproof"
+    | V_EndSubproof -> "endsubproof"
+    | V_Search -> "search"
+    | V_Bullet -> "bullet"
+    in
+    str lop ++ str name ++ str closing ++ elt ++ str rop ++ str name ++ str
+    closing
+

@@ -67,21 +67,22 @@ let print_hunks n pr pr_binders (terms,termlists,binders) unp =
   let rec aux = function
   | [] -> mt ()
   | UnpMetaVar (_,prec) :: l ->
-      let c = pop env in pr (n,prec) c ++ aux l
+      let c = pop env in handle C_UnpMetaVar (pr (n,prec) c ++ aux l)
   | UnpListMetaVar (_,prec,sl) :: l ->
       let cl = pop envlist in
       let pp1 = prlist_with_sep (fun () -> aux sl) (pr (n,prec)) cl in
       let pp2 = aux l in
-      pp1 ++ pp2
+      handle C_UnpListMetaVar (pp1 ++ pp2)
   | UnpBinderListMetaVar (_,isopen,sl) :: l ->
-      let cl = pop bll in pr_binders (fun () -> aux sl) isopen cl ++ aux l
-  | UnpTerminal s :: l -> str s ++ aux l
+      let cl = pop bll in handle C_UnpBinderListMetaVar (pr_binders (fun () ->
+        aux sl) isopen cl ++ aux l)
+  | UnpTerminal s :: l -> handle C_UnpTerminal (str s ++ aux l)
   | UnpBox (b,sub) :: l ->
       (* Keep order: side-effects *)
       let pp1 = ppcmd_of_box b (aux sub) in
       let pp2 = aux l in
-      pp1 ++ pp2
-  | UnpCut cut :: l -> ppcmd_of_cut cut ++ aux l in
+      handle C_UnpBox (pp1 ++ pp2)
+  | UnpCut cut :: l -> handle C_UnpCut (ppcmd_of_cut cut ++ aux l) in
   aux unp
 
 let pr_notation pr pr_binders s env =
@@ -110,22 +111,23 @@ let pr_sep_com sep f c = pr_with_comments (constr_loc c) (sep() ++ f c)
 let pr_in_comment pr x = str "(* " ++ pr x ++ str " *)"
 
 let pr_glob_sort = function
-  | GProp -> str "Prop"
-  | GSet -> str "Set"
-  | GType u -> hov 0 (str "Type" ++ pr_opt (pr_in_comment str) u)
+  | GProp -> handle C_GlobSort (str "Prop")
+  | GSet ->  handle C_GlobSort (str "Set")
+  | GType u -> hov 0 (handle C_GlobSort (str "Type" ++ pr_opt (pr_in_comment str)
+  u))
 
-let pr_id = pr_id
-let pr_name = pr_name
-let pr_qualid = pr_qualid
+let pr_id e = handle C_Id (pr_id e)
+let pr_name e = handle C_Name (pr_name e)
+let pr_qualid e = handle C_Qualid (pr_qualid e)
 let pr_patvar = pr_id
 
 let pr_expl_args pr (a,expl) =
   match expl with
-  | None -> pr (lapp,L) a
+  | None -> handle C_Explicitation (pr (lapp,L) a)
   | Some (_,ExplByPos (n,_id)) ->
       anomaly("Explicitation by position not implemented")
   | Some (_,ExplByName id) ->
-      str "(" ++ pr_id id ++ str ":=" ++ pr ltop a ++ str ")"
+      handle C_Explicitation (str "(" ++ pr_id id ++ str ":=" ++ pr ltop a ++ str ")")
 
 let pr_opt_type pr = function
   | CHole _ -> mt ()
@@ -198,7 +200,8 @@ let rec pr_patt sep inh p =
   in
   let loc = cases_pattern_expr_loc p in
   pr_with_comments loc
-    (sep() ++ if prec_less prec inh then strm else surround strm)
+    (handle C_Patt (sep() ++ if prec_less prec inh then strm else surround
+    strm))
 
 let pr_patt = pr_patt mt
 
@@ -251,7 +254,8 @@ let pr_binder many pr (nal,k,t) =
 	  hov 1 (surround_implicit b s)
 	| _ ->
 	  let s = prlist_with_sep spc pr_lname nal ++ str " : " ++ pr t in
-	  hov 1 (if many then surround_impl b s else surround_implicit b s)
+	  handle C_Binder (hov 1 (if many then surround_impl b s else surround_implicit
+    b s))
 
 let pr_binder_among_many pr_c = function
   | LocalRawAssum (nal,k,t) ->
@@ -331,10 +335,10 @@ let rec split_fix n typ def =
 let pr_recursive_decl pr pr_dangling dangling_with_for id bl annot t c =
   let pr_body =
     if dangling_with_for then pr_dangling else pr in
-  pr_id id ++ str" " ++
+  handle C_RecDecl (pr_id id ++ str" " ++
   hov 0 (pr_undelimited_binders spc (pr ltop) bl ++ annot) ++
   pr_opt_type_spc pr t ++ str " :=" ++
-  pr_sep_com (fun () -> brk(1,2)) (pr_body ltop) c
+  pr_sep_com (fun () -> brk(1,2)) (pr_body ltop) c)
 
 let pr_guard_annot pr_aux bl (n,ro) =
   match n with
@@ -421,51 +425,52 @@ let pr_dangling_with_for sep pr inherited a =
 
 let pr pr sep inherited a =
   let (strm,prec) = match a with
-  | CRef r -> pr_reference r, latom
+  | CRef r -> handle C_CRef (pr_reference r), latom
   | CFix (_,id,fix) ->
-      hov 0 (str"fix " ++
+      handle C_CFix (hov 0 (str"fix " ++
              pr_recursive
-               (pr_fixdecl (pr mt) (pr_dangling_with_for mt pr)) (snd id) fix),
+               (pr_fixdecl (pr mt) (pr_dangling_with_for mt pr)) (snd id) fix)),
       lfix
-  | CCoFix (_,id,cofix) ->
+  | CCoFix (_,id,cofix) -> handle C_CCoFix (
       hov 0 (str "cofix " ++
              pr_recursive
-              (pr_cofixdecl (pr mt) (pr_dangling_with_for mt pr)) (snd id) cofix),
+              (pr_cofixdecl (pr mt) (pr_dangling_with_for mt pr)) (snd id)
+              cofix)),
       lfix
   | CProdN _ ->
       let (bl,a) = extract_prod_binders a in
-      hov 0 (
+      handle C_CProdN (hov 0 (
 	hov 2 (pr_delimited_binders pr_forall spc
                  (pr mt ltop) bl) ++
-        str "," ++ pr spc ltop a),
+        str "," ++ pr spc ltop a)),
       lprod
   | CLambdaN _ ->
       let (bl,a) = extract_lam_binders a in
-      hov 0 (
+      handle C_CLambdaN (hov 0 (
         hov 2 (pr_delimited_binders pr_fun spc
                 (pr mt ltop) bl) ++
-	       pr_fun_sep ++ pr spc ltop a),
+	       pr_fun_sep ++ pr spc ltop a)),
       llambda
   | CLetIn (_,(_,Name x),(CFix(_,(_,x'),[_])|CCoFix(_,(_,x'),[_]) as fx), b)
       when x=x' ->
-      hv 0 (
+      handle C_CLetIn (hv 0 (
         hov 2 (str "let " ++ pr mt ltop fx ++ str " in") ++
-        pr spc ltop b),
+        pr spc ltop b)),
       lletin
   | CLetIn (_,x,a,b) ->
-      hv 0 (
+      handle C_CLetIn (hv 0 (
         hov 2 (str "let " ++ pr_lname x ++ str " :=" ++
                pr spc ltop a ++ str " in") ++
-        pr spc ltop b),
+        pr spc ltop b)),
       lletin
   | CAppExpl (_,(Some i,f),l) ->
       let l1,l2 = List.chop i l in
       let c,l1 = List.sep_last l1 in
       let p = pr_proj (pr mt) pr_appexpl c f l1 in
       if l2<>[] then
-	p ++ prlist (pr spc (lapp,L)) l2, lapp
+	handle C_CAppExpl (p ++ prlist (pr spc (lapp,L)) l2), lapp
       else
-	p, lproj
+	handle C_CAppExpl p, lproj
   | CAppExpl (_,(None,Ident (_,var)),[t])
   | CApp (_,(_,CRef(Ident(_,var))),[t,None])
         when var = Notation_ops.ldots_var ->
@@ -477,77 +482,81 @@ let pr pr sep inherited a =
       assert (snd c = None);
       let p = pr_proj (pr mt) pr_app (fst c) f l1 in
       if l2<>[] then
-	p ++ prlist (fun a -> spc () ++ pr_expl_args (pr mt) a) l2, lapp
+	handle C_CApp (p ++ prlist (fun a -> spc () ++ pr_expl_args (pr mt) a) l2), lapp
       else
 	p, lproj
-  | CApp (_,(None,a),l) -> pr_app (pr mt) a l, lapp
+  | CApp (_,(None,a),l) -> handle C_CApp (pr_app (pr mt) a l), lapp
   | CRecord (_,w,l) ->
       let beg =
 	match w with
 	| None -> spc ()
 	| Some t -> spc () ++ pr spc ltop t ++ spc () ++ str"with" ++ spc ()
       in
-	hv 0 (str"{|" ++ beg ++
+	handle C_CRecord (hv 0 (str"{|" ++ beg ++
 	      prlist_with_sep pr_semicolon
 		(fun (id, c) -> h 1 (pr_reference id ++ spc () ++ str":=" ++ pr spc ltop c)) l
-	      ++ str" |}"), latom
+	      ++ str" |}")), latom
 
   | CCases (_,LetPatternStyle,rtntypopt,[c,asin],[(_,[(loc,[p])],b)]) ->
-      hv 0 (
+      handle C_CCases (hv 0 (
 	str "let '" ++
 	  hov 0 (pr_patt ltop p ++
 		 pr_asin (pr_dangling_with_for mt pr) asin ++
 		 str " :=" ++ pr spc ltop c ++
 		 pr_case_type (pr_dangling_with_for mt pr) rtntypopt ++
-		 str " in" ++ pr spc ltop b)),
+		 str " in" ++ pr spc ltop b))),
 	lletpattern
   | CCases(_,_,rtntypopt,c,eqns) ->
-      v 0
+      handle C_CCases (v 0
         (hv 0 (str "match" ++ brk (1,2) ++
 		  hov 0 (
 		    prlist_with_sep sep_v
 		      (pr_case_item (pr_dangling_with_for mt pr)) c
 		    ++ pr_case_type (pr_dangling_with_for mt pr) rtntypopt) ++
 		  spc () ++ str "with") ++
-		  prlist (pr_eqn (pr mt)) eqns ++ spc() ++ str "end"),
+		  prlist (pr_eqn (pr mt)) eqns ++ spc() ++ str "end")),
       latom
   | CLetTuple (_,nal,(na,po),c,b) ->
-      hv 0 (
+      handle C_CLetTuple (hv 0 (
         str "let " ++
 	hov 0 (str "(" ++
                prlist_with_sep sep_v pr_lname nal ++
                str ")" ++
 	       pr_simple_return_type (pr mt) na po ++ str " :=" ++
                pr spc ltop c ++ str " in") ++
-        pr spc ltop b),
+        pr spc ltop b)),
       lletin
   | CIf (_,c,(na,po),b1,b2) ->
       (* On force les parenthèses autour d'un "if" sous-terme (même si le
 	 parsing est lui plus tolérant) *)
-      hv 0 (
+      handle C_CIf (hv 0 (
 	hov 1 (str "if " ++ pr mt ltop c ++ pr_simple_return_type (pr mt) na po) ++
 	spc () ++
 	hov 0 (str "then" ++ pr (fun () -> brk (1,1)) ltop b1) ++ spc () ++
-	hov 0 (str "else" ++ pr (fun () -> brk (1,1)) ltop b2)),
+	hov 0 (str "else" ++ pr (fun () -> brk (1,1)) ltop b2))),
       lif
 
-  | CHole _ -> str "_", latom
-  | CEvar (_,n,l) -> pr_evar (pr mt) n l, latom
-  | CPatVar (_,(_,p)) -> str "?" ++ pr_patvar p, latom
-  | CSort (_,s) -> pr_glob_sort s, latom
+  | CHole _ -> handle C_CHole (str "_"), latom
+  | CEvar (_,n,l) -> handle C_CEvar (pr_evar (pr mt) n l), latom
+  | CPatVar (_,(_,p)) -> handle C_CPatVar (str "?" ++ pr_patvar p), latom
+  | CSort (_,s) -> handle C_CSort (pr_glob_sort s), latom
   | CCast (_,a,b) ->
-      hv 0 (pr mt (lcast,L) a ++ cut () ++
+      handle C_CCast (hv 0 (pr mt (lcast,L) a ++ cut () ++
 	    match b with
 	      | CastConv b -> str ":" ++ pr mt (-lcast,E) b
 	      | CastVM b -> str "<:" ++ pr mt (-lcast,E) b
-	      | CastCoerce -> str ":>"), lcast
+	      | CastCoerce -> str ":>")), lcast
   | CNotation (_,"( _ )",([t],[],[])) ->
-      pr (fun()->str"(") (max_int,L) t ++ str")", latom
+      handle C_CNotation (pr (fun()->str"(") (max_int,L) t ++ str")"), latom
   | CNotation (_,s,env) ->
-      pr_notation (pr mt) (pr_binders_gen (pr mt ltop)) s env
-  | CGeneralization (_,bk,ak,c) -> pr_generalization bk ak (pr mt ltop c), latom
-  | CPrim (_,p) -> pr_prim_token p, prec_of_prim_token p
-  | CDelimiters (_,sc,a) -> pr_delimiters sc (pr mt (ldelim,E) a), ldelim
+      let (pp, prec) = (pr_notation (pr mt) (pr_binders_gen (pr mt ltop)) s
+      env) in handle C_CNotation pp, prec
+  | CGeneralization (_,bk,ak,c) -> handle C_CGeneralization (pr_generalization
+  bk ak (pr mt ltop c)), latom
+  | CPrim (_,p) -> let pp,prec = (pr_prim_token p, prec_of_prim_token p) in
+    handle C_CPrim pp, prec
+  | CDelimiters (_,sc,a) -> handle C_CDelimiters (pr_delimiters sc (pr mt
+  (ldelim,E) a)), ldelim
   in
   let loc = constr_loc a in
   pr_with_comments loc

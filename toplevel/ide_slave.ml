@@ -284,6 +284,15 @@ let locate s =
             s)))))))
   with Loc.Exc_located (_,Nametab.GlobalizationError q) -> None
 
+(* Pretty prints coq code: marks it up with Xml tags corresponding to
+ * its semantic value (Id/constrexpr/vernacexpr)
+ *)
+let prettyprint s =
+  Pp.explicit := true;
+  let pa = Pcoq.Gram.parsable (Stream.of_string s) in
+  let (_,ast) = Vernac.parse_sentence (pa,None) in
+  let ret = Pp.string_of_ppcmds (Ppvernac.pr_vernac ast) in
+  Pp.explicit := false; ret
 
 (** When receiving the Quit call, we don't directly do an [exit 0],
     but rather set this reference, in order to send a final answer
@@ -333,6 +342,7 @@ let eval_call c =
     Serialize.quit = (fun () -> quit := true);
     Serialize.about = interruptible about;
     Serialize.locate = interruptible locate;
+    Serialize.prettyprint = interruptible prettyprint;
     Serialize.handle_exn = handle_exn; }
   in
   (* If the messages of last command are still there, we remove them *)

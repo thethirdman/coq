@@ -78,6 +78,10 @@ val set_options : (option_name * option_value) list -> unit call
  *)
 val locate : string -> string option call
 
+(** Pretty prints code using a "marked-up" style. More info in Ppconstr
+ * and Pp *)
+val prettyprint : string -> string call
+
 (** Quit gracefully the interpreter. *)
 val quit : unit call
 
@@ -99,6 +103,7 @@ type handler = {
   quit : unit -> unit;
   about : unit -> coq_info;
   locate : string -> string option;
+  prettyprint : string -> string;
   handle_exn : exn -> location * string;
 }
 

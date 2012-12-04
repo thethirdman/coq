@@ -37,6 +37,7 @@ type 'a call =
   | Quit
   | About
   | Locate of string
+  | Prettyprint of string
 
 type unknown
 
@@ -58,6 +59,7 @@ type handler = {
   quit : unit -> unit;
   about : unit -> coq_info;
   locate : string -> string option;
+  prettyprint : string -> string;
   handle_exn : exn -> location * string;
 }
 
@@ -76,6 +78,7 @@ let mkcases s : string list list call = MkCases s
 let search flags : string coq_object list call = Search flags
 let quit : unit call = Quit
 let locate s : string option call = Locate s
+let prettyprint s : string call = Prettyprint s
 
 (** * Coq answers to CoqIde *)
 
@@ -103,6 +106,7 @@ let abstract_eval_call handler c =
             | Quit -> Obj.magic (handler.quit () : unit)
             | About -> Obj.magic (handler.about () : coq_info)
             | Locate s -> Obj.magic (handler.locate s : string option)
+            | Prettyprint s -> Obj.magic (handler.prettyprint s : string)
           in Good res
   with e ->
     let (l, str) = handler.handle_exn e in
@@ -325,6 +329,8 @@ let of_call = function
   Element ("call", ["val", "about"], [])
 | Locate s ->
   Element ("call", ["val", "locate"], [PCData s])
+| Prettyprint s ->
+    Element ("call", ["val", "prettyprint"], [PCData s])
 
 let to_call = function
 | Element ("call", attrs, l) ->
@@ -353,6 +359,7 @@ let to_call = function
   | "quit" -> Quit
   | "about" -> About
   | "locate" -> Locate (raw_string l)
+  | "prettyprint" -> Prettyprint (raw_string l)
   | _ -> raise Marshal_error
   end
 | _ -> raise Marshal_error
@@ -496,6 +503,7 @@ let expected_answer_type = function
   | Quit -> Unit
   | About -> Coq_info
   | Locate _ -> Option String
+  | Prettyprint _ -> String
 
 let of_answer (q : 'a call) (r : 'a value) : xml =
   let rec convert ty : 'a -> xml = match ty with
@@ -574,6 +582,7 @@ let pr_call = function
   | Quit -> "QUIT"
   | About -> "ABOUT"
   | Locate s -> "LOCATE"^s
+  | Prettyprint s -> "PRETTYPRINT"^s
 
 let pr_value_gen pr = function
   | Good v -> "GOOD " ^ pr v
@@ -644,4 +653,5 @@ let pr_full_value call value =
     | Quit -> pr_value value
     | About -> pr_value value
     | Locate s -> pr_value_gen pr_string (Obj.magic value : string value)
+    | Prettyprint _ -> pr_value value
 
