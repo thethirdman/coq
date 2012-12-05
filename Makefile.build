@@ -542,8 +542,6 @@ $(FAKEIDE): lib/xml_lexer$(BESTOBJ) lib/xml_parser$(BESTOBJ) lib/xml_utils$(BEST
 
 # Coqdoc-ng specific rules: TO REMOVE SOON
 
-MENHIRDIR='/home/yann/hack/menhir/svn/menhir/src'
-
 NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo lib/xml_utils.cmo \
 	$(addprefix tools/coqdoc-ng/src/, \
 	coqtop_handle.cmo settings.cmo cst.cmo ast.cmo	doc_lexer.cmo \
@@ -551,22 +549,15 @@ NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo lib/xml_utils.cmo 
 
 tools/coqdoc-ng/src/coqdoc.cmo: tools/coqdoc-ng/src/coqdoc.ml
 	$(SHOW)'coqdoc cmo'
-	$(OCAMLC) -c -I $(MENHIRDIR) $(MLINCLUDES) $(BYTEFLAGS) $<
+	$(OCAMLC) -c $(MLINCLUDES) $(BYTEFLAGS) $<
 
 tools/coqdoc-ng/src/coqdoc.cmx: tools/coqdoc-ng/src/coqdoc.ml
 	$(SHOW)'coqdoc cmo'
-	$(OCAMLOPT) -c -I $(MENHIRDIR) $(MLINCLUDES) $(OPTFLAGS) $<
-
+	$(OCAMLOPT) -c $(MLINCLUDES) $(OPTFLAGS) $<
 
 bin/coqdoc-ng: $(patsubst %.cma,%$(BESTLIB),$(NGCMO:.cmo=$(BESTOBJ)))
 	$(SHOW)'OCAMLBEST -o $@'
-	$(call bestocaml, $(MENHIRDIR)/menhirLib$(BESTOBJ),unix str)
-
-tools/coqdoc-ng/src/parser.ml tools/coqdoc-ng/src/parser.mli: tools/coqdoc-ng/src/parser.mly
-	$(SHOW)'MENHIR $<'
-	$(HIDE)menhir $<
-
-
+	$(call bestocaml, , unix str)
 
 # Special rule for the compatibility-with-camlp5 extension for camlp4
 
