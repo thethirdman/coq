@@ -76,7 +76,7 @@ PLUGINS:=\
 
 SRCDIRS:=\
   $(CORESRCDIRS)  \
-  tools 	tools/coqdoc tools/coqdoc-ng/src scripts	\
+  tools 	tools/coqdoc/src scripts	\
   $(addprefix plugins/, $(PLUGINS))
 
 IDESRCDIRS:=\
@@ -243,8 +243,10 @@ DEBUGPRINTERS:=dev/top_printers.cmo dev/vm_printers.cmo dev/printers.cma
 
 COQDEPCMO:=$(COQENVCMO) tools/coqdep_lexer.cmo tools/coqdep_common.cmo tools/coqdep.cmo
 
-COQDOCCMO:=lib/clib.cma $(addprefix tools/coqdoc/, \
-  cdglobals.cmo alpha.cmo index.cmo tokens.cmo output.cmo cpretty.cmo main.cmo )
+COQDOCCMO := lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo lib/xml_utils.cmo \
+	$(addprefix tools/coqdoc/src/, \
+	coqtop_handle.cmo settings.cmo cst.cmo parser.cmo ast.cmo	doc_lexer.cmo \
+	ident.cmo vernac_lexer.cmo html.cmo	vdoc.cmo coqdoc.cmo)
 
 COQMAKEFILECMO:=lib/clib.cma ide/project_file.cmo tools/coq_makefile.cmo
 
