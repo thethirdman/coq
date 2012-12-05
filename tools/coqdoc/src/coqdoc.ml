@@ -13,10 +13,10 @@ let treat_doc str =
   (Parser.parse_doc lex_doc lexbuf)
 
 (* Calls the compilation chain when the input file is a .v*)
-let from_v = assert false
+let from_v () = assert false
 
 (* Calls the compilation chain when the input file is a .tex*)
-let from_coqtex = assert false
+let from_coqtex () = assert false
 
 (** Main function for coqdoc. Parses the arguments, and generates a .html file
  * from the given .v file *)
