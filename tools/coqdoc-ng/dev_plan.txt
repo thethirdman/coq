@@ -1,13 +1,15 @@
 Plan de développement de Coqdoc
 ===============================
 
-[TODO]
+[DONE]
 o Ajout de coqdoc au dépôt
-      -> Remplacer l'ancien coqdoc, patch correctement les makefiles
-         retirer les dépendances à menhir et la menhirLib ?
+      -> le nouveau coqdoc-ng et coqdoc coexistent, patch correctement les
+         makefiles retirer les dépendances à menhir et la menhirLib ?
 [TODO]
 o 0.1: Squelette
       -> Finir l'ajout des interactions avec coqtop (parse notamment)
+      -> Gestion des identifiant avec locate (contexte notamment)
+      -> Multifichier ?
 [TODO]
 o 0.1: Version préliminaire
       -> Possède juste la traduction .v -> .html
