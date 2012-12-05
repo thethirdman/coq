@@ -61,7 +61,7 @@ endef
 
 ## Files in the source tree
 
-YACCFILES:=$(call find, '*.mly')
+YACCFILES:=$(call find, '*.mly' -and -not -wholename '*/coqdoc-ng/src/parser.mly')
 LEXFILES := $(call find, '*.mll')
 export MLLIBFILES := $(call find, '*.mllib')
 export ML4FILES := $(call find, '*.ml4')
