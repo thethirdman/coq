@@ -542,11 +542,12 @@ $(FAKEIDE): lib/xml_lexer$(BESTOBJ) lib/xml_parser$(BESTOBJ) lib/xml_utils$(BEST
 
 # Coqdoc-ng specific rules: TO REMOVE SOON
 
-MENHIRDIR='/usr/local/lib/ocaml/3.12.1/menhirLib'
+MENHIRDIR='/home/yann/hack/menhir/svn/menhir/src'
+
 NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo lib/xml_utils.cmo \
 	$(addprefix tools/coqdoc-ng/src/, \
-	coqtop_handle.cmo settings.cmo cst.cmo ast.cmo	doc_lexer.cmo ident.cmo \
-	vernac_lexer.cmo html.cmo	parser.cmo vdoc.cmo coqdoc.cmo)
+	coqtop_handle.cmo settings.cmo cst.cmo ast.cmo	doc_lexer.cmo \
+	vernac_lexer.cmo parser.cmo vdoc.cmo coqdoc.cmo)
 
 tools/coqdoc-ng/src/coqdoc.cmo: tools/coqdoc-ng/src/coqdoc.ml
 	$(SHOW)'coqdoc cmo'
