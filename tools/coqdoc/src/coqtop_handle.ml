@@ -135,10 +135,58 @@ let rewind coqtop i = eval_call coqtop default_logger (Serialize.rewind i)
 let search coqtop flags = eval_call coqtop default_logger (Serialize.search flags)
 let status coqtop = eval_call coqtop default_logger Serialize.status
 let locate coqtop s = eval_call coqtop default_logger (Serialize.locate s)
+let prettyprint coqtop s  = eval_call coqtop default_logger
+    (Serialize.prettyprint s)
 
 (** Unboxes the value if no error happened *)
 let handle_value = function
   Interface.Good v | Interface.Unsafe v -> v
   | Interface.Fail (loc,str) -> raise (Invalid_argument str)
+
+
+(** Handling for the prettyprint command of the xml protocol
+ *
+ * From the annotated string, we build an XML ast, which is transformed into
+ * the Annotation type, which has the same structure, but uses the types
+ * taken from Pp.
+ *)
+
+exception Xml_error of string
+type xml = Serialize.xml =
+        | Element of (string * (string * string) list * xml list)
+        | PCData of string
+
+  (* Annotation type: either a simple, or a context node containing an
+   * annotation
+   *)
+type annot =
+  | AString of string
+  | ATag of Pp.context_handler * annot list
+
+(** Transforms the return value of prettyprint (a string) into
+ * a Annot tags sequence
+ *)
+let get_notation str =
+  let p = Xml_parser.make (Xml_parser.SString str) in
+  let xml_query = Xml_parser.parse p in
+  let rec translate = function (* Xml -> annot *)
+    PCData s -> AString s
+    | Element (name, [], xml) -> (* We do not accept attributes *)
+        ATag (Pp.context_of_string name, List.map translate xml)
+    | Element (name,_,_) ->
+        raise (Xml_error ("Invalid formated tag: " ^ name ^ "\n"))
+
+  in translate xml_query
+
+(** Generic function for annotation map/fold.
+ * Takes a merge function with the type 'a list -> 'a
+ * A tagfun with the type (context_handler -> ('a -> 'a))
+ * A termfun with the type string -> 'a
+ * And an annot
+ *)
+let rec fold_annot merge tagfun termfun ann =
+  match ann with
+  AString s -> termfun s
+  | ATag (t, c) -> (tagfun t) (merge (List.map (fold_annot merge tagfun termfun) c))
 
 end
