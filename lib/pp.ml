@@ -470,7 +470,7 @@ let explicit = ref false
 
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
     | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
-    | C_UnpCut | C_Generalization | C_Name | C_GlobSort | C_CHole
+    | C_UnpCut | C_Name | C_GlobSort | C_CHole
     | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl | C_CRef
     | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
     | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
@@ -501,7 +501,7 @@ let handle context elt =
   else
     let lop = "<" and rop = "</" and closing = ">" in
     let name = match context with
-    | C_CNotation -> "notation"
+    | C_CNotation -> "cnotation"
     | C_Id -> "id"
     | C_Ref -> "ref"
     | C_UnpMetaVar -> "unpmetavar"
@@ -510,7 +510,6 @@ let handle context elt =
     | C_UnpTerminal -> "unpterminal"
     | C_UnpBox -> "unpbox"
     | C_UnpCut -> "unpcut"
-    | C_Generalization -> "generalization"
     | C_Name   -> "name"
     | C_GlobSort -> "globsort"
     | C_CHole -> "hole"
@@ -536,7 +535,7 @@ let handle context elt =
     | C_CSort -> "sort"
     | C_CCast -> "cast"
     | C_CGeneralization -> "generalization"
-    | C_CDelimiters -> "delimiters"
+    | C_CDelimiters -> "cdelimiters"
     | C_CPrim -> "prim"
     | V_AbortAll -> "abortall"
     | V_Restart -> "restart"
@@ -563,11 +562,11 @@ let handle context elt =
     | V_Fail -> "fail"
     | V_TacticNotation -> "tacticnotation"
     | V_OpenCloseScope -> "openclosescope"
-    | V_Delimiters -> "delimiters"
+    | V_Delimiters -> "vdelimiters"
     | V_BindScope -> "bindscope"
     | V_ArgumentScope -> "argumentscope"
     | V_Infix -> "infix"
-    | V_Notation -> "notation"
+    | V_Notation -> "vnotation"
     | V_SyntaxExtension -> "syntaxextension"
     | V_Definition -> "definition"
     | V_StartTheoremProof -> "starttheoremproof"
@@ -596,7 +595,7 @@ let handle context elt =
     | V_Include -> "include"
     | V_Solve -> "solve"
     | V_SolveExistential -> "solveexistential"
-    | V_RequireFrom -> "requiefrom"
+    | V_RequireFrom -> "requirefrom"
     | V_AddLoadPath -> "addloadpath"
     | V_RemoveLoadPath -> "removeloadpath"
     | V_AddMLPath -> "addmlpath"
@@ -636,3 +635,134 @@ let handle context elt =
     str lop ++ str name ++ str closing ++ elt ++ str rop ++ str name ++ str
     closing
 
+let context_of_string = function
+  | "cnotation" -> C_CNotation
+  | "id" -> C_Id
+  | "ref" -> C_Ref
+  | "unpmetavar" -> C_UnpMetaVar
+  | "unplistmetavar" -> C_UnpListMetaVar
+  | "unpbinderlistmetavar" -> C_UnpBinderListMetaVar
+  | "unpterminal" -> C_UnpTerminal
+  | "unpbox" -> C_UnpBox
+  | "unpcut" -> C_UnpCut
+  | "name" -> C_Name
+  | "globsort" -> C_GlobSort
+  | "hole" -> C_CHole
+  | "explicitation" -> C_Explicitation
+  | "qualid" -> C_Qualid
+  | "patt" -> C_Patt
+  | "binder" -> C_Binder
+  | "recdecl" -> C_RecDecl
+  | "fix" -> C_CFix
+  | "cofix" -> C_CCoFix
+  | "prodn" -> C_CProdN
+  | "lambdan" -> C_CLambdaN
+  | "letin" -> C_CLetIn
+  | "appexpl" -> C_CAppExpl
+  | "app" -> C_CApp
+  | "record" -> C_CRecord
+  | "cases" -> C_CCases
+  | "lettuple" -> C_CLetTuple
+  | "if" -> C_CIf
+  | "evar" -> C_CEvar
+  | "patvar" -> C_CPatVar
+  | "sort" -> C_CSort
+  | "cast" -> C_CCast
+  | "generalization" -> C_CGeneralization
+  | "cdelimiters" -> C_CDelimiters
+  | "prim" -> C_CPrim
+  | "abortall" -> V_AbortAll
+  | "restart" -> V_Restart
+  | "unfocus" -> V_Unfocus
+  | "unfocused" -> V_Unfocused
+  | "goal" -> V_Goal
+  | "abort" -> V_Abort
+  | "undo" -> V_Undo
+  | "undoto" -> V_UndoTo
+  | "backtrack" -> V_Backtrack
+  | "focus" -> V_Focus
+  | "show" -> V_Show
+  | "checkguard" -> V_CheckGuard
+  | "resetname" -> V_ResetName
+  | "resetinitial" -> V_ResetInitial
+  | "back" -> V_Back
+  | "backto" -> V_BackTo
+  | "writestate" -> V_WriteState
+  | "restorestate" -> V_RestoreState
+  | "list" -> V_List
+  | "load" -> V_Load
+  | "time" -> V_Time
+  | "timeout" -> V_Timeout
+  | "fail" -> V_Fail
+  | "tacticnotation" -> V_TacticNotation
+  | "openclosescope" -> V_OpenCloseScope
+  | "vdelimiters" -> V_Delimiters
+  | "bindscope" -> V_BindScope
+  | "argumentscope" -> V_ArgumentScope
+  | "infix" -> V_Infix
+  | "vnotation" -> V_Notation
+  | "syntaxextension" -> V_SyntaxExtension
+  | "definition" -> V_Definition
+  | "starttheoremproof" -> V_StartTheoremProof
+  | "endproof" -> V_EndProof
+  | "exactproof" -> V_ExactProof
+  | "assumption" -> V_Assumption
+  | "inductive" -> V_Inductive
+  | "fixpoint" -> V_Fixpoint
+  | "cofixpoint" -> V_CoFixpoint
+  | "scheme" -> V_Scheme
+  | "combinedscheme" -> V_CombinedScheme
+  | "beginsection" -> V_BeginSection
+  | "endsegment" -> V_EndSegment
+  | "require" -> V_Require
+  | "import" -> V_Import
+  | "canonical" -> V_Canonical
+  | "coercion" -> V_Coercion
+  | "identitycoercion" -> V_IdentityCoercion
+  | "instance" -> V_Instance
+  | "context" -> V_Context
+  | "declareinstances" -> V_DeclareInstances
+  | "declareclass" -> V_DeclareClass
+  | "definemodule" -> V_DefineModule
+  | "declaremodule" -> V_DeclareModule
+  | "declaremoduletype" -> V_DeclareModuleType
+  | "include" -> V_Include
+  | "solve" -> V_Solve
+  | "solveexistential" -> V_SolveExistential
+  | "requirefrom" -> V_RequireFrom
+  | "addloadpath" -> V_AddLoadPath
+  | "removeloadpath" -> V_RemoveLoadPath
+  | "addmlpath" -> V_AddMLPath
+  | "declaremlmodule" -> V_DeclareMLModule
+  | "chdir" -> V_Chdir
+  | "declaretacticdefinition" -> V_DeclareTacticDefinition
+  | "createhintdb" -> V_CreateHintDb
+  | "removehints" -> V_RemoveHints
+  | "hints" -> V_Hints
+  | "syntacticdefinition" -> V_SyntacticDefinition
+  | "declareimplicits" -> V_DeclareImplicits
+  | "arguments" -> V_Arguments
+  | "reserve" -> V_Reserve
+  | "generalizable" -> V_Generalizable
+  | "setopacity" -> V_SetOpacity
+  | "unsetoption" -> V_UnsetOption
+  | "setoption" -> V_SetOption
+  | "addoption" -> V_AddOption
+  | "removeoption" -> V_RemoveOption
+  | "memoption" -> V_MemOption
+  | "printoption" -> V_PrintOption
+  | "checkmayeval" -> V_CheckMayEval
+  | "globalcheck" -> V_GlobalCheck
+  | "declarereduction" -> V_DeclareReduction
+  | "print" -> V_Print
+  | "locate" -> V_Locate
+  | "comments" -> V_Comments
+  | "toplevelcontrol" -> V_ToplevelControl
+  | "extend" -> V_Extend
+  | "proof" -> V_Proof
+  | "proofmode" -> V_ProofMode
+  | "subproof" -> V_Subproof
+  | "endsubproof" -> V_EndSubproof
+  | "search" -> V_Search
+  | "bullet" -> V_Bullet
+  | s -> raise (Invalid_argument ("Context: \"" ^ s ^ "\" not found"))
