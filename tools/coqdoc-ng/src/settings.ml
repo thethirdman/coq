@@ -97,10 +97,18 @@ let io = {
 }
 
 (** Load a document. *)
+let extension_of_filename fname = 
+  try 
+    let wo_ext   = Filename.chop_extension fname in 
+    let len_base = String.length wo_ext in
+    String.sub fname (len_base + 1) (String.length fname - len_base - 1)
+  with Invalid_argument "Filename.chop_extension" ->
+    "(no extension)"
+
 let load_input_document fname = try {
   document_filename = Named fname;
   document_channel  = open_in fname;
-  document_type     = frontend_type_of_extension (Filename.chop_extension fname)
+  document_type     = frontend_type_of_extension (extension_of_filename fname)
 } with (Sys_error _) as e ->
   (* FIXME: Use a standardize way of raising fatal errors. *)
   raise e
@@ -165,7 +173,7 @@ let check_settings_consistency () =
 	(** If no filename is specified, we are good. *)
 	()
       | Named filename -> 
-	let extension = Filename.chop_extension filename in
+	let extension = extension_of_filename filename in
 	let xextension = extension_of_backend_type io.output.document_type in
 	if extension <> xextension then
 	  fatal_error (Printf.sprintf 
