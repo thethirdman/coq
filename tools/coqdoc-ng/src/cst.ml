@@ -27,7 +27,7 @@ type doc = [
   | `List of doc list
   (* Type for formatted code output: list of code elements *)
   | `Code of code list
-    (* Type for documentation queries: @name{arg_list} *)
+  (* Type for documentation queries: @name{arg_list} *)
   | `Query of (string*string list)
   (* Type for a sequence of doc elements: DO NOT CONFUSE WITH `List *)
   | `Seq of doc list ]

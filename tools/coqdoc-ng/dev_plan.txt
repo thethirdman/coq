@@ -9,6 +9,7 @@ o Ajout de coqdoc au dépôt
 o 0.1: Squelette
       -> Finir l'ajout des interactions avec coqtop (parse notamment)
       -> Gestion des identifiant avec locate (contexte notamment)
+      -> Gerer le printing des symboles tels que '->' ou '/\'
       -> Multifichier ?
 [TODO]
 o 0.1: Version préliminaire
