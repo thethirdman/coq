@@ -194,10 +194,17 @@ val pperr_flush : unit -> unit
 val pp_flush : unit -> unit
 val flush_all: unit -> unit
 
-(** Modify pretty printing for Xml output *)
+(** Modify pretty printing for Xml output:
+  * We chose to do std_ppcmds -> std_ppcmds translation for the sake
+  * of simplicity. This way, we just have to annotate the pp[constr|vernac]
+  * with the type needed.
+  * An interesting improvement would be to translate to the XML type, but
+  * this requires a lot more code modifications
+  *)
+
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
     | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
-    | C_UnpCut | C_Generalization | C_Name | C_GlobSort | C_CHole
+    | C_UnpCut | C_Name | C_GlobSort | C_CHole
     | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl | C_CRef
     | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
     | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
@@ -225,6 +232,7 @@ type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
 
 val explicit : bool ref
 val handle : context_handler -> std_ppcmds -> std_ppcmds
+val context_of_string : string -> context_handler
 
 
 (** {6 Deprecated functions} *)

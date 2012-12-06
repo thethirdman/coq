@@ -27,7 +27,7 @@ type ast_with_query = with_query list
 type ast_no_query = no_query list
 
 (** Cst.doc -> ast: extract the queries to evaluate *)
-let rec extract_queries = assert false
+let rec extract_queries () = assert false
 
 (* Does the interaction with coqtop for code sections of the input file:
   * takes a Cst.Code, returns a Cst.Doc containing the pretty_print output
