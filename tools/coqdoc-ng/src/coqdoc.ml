@@ -4,8 +4,6 @@
     tool. 
 *)
 
-open Coqtop_handle
-
 (** Initialization. *)
 let initialize () = 
   Settings.parse ()
@@ -31,6 +29,8 @@ let frontend () =
     These answers are written in a generic format (the subset of the Vdoc
     format that represents coqtop answers, typically an XML-like document).
 *)
+open Coqtop_handle
+
 let resolve_coqtop_interaction inputs = 
   (** Initialize a communication layer with a coqtop instance. *)
   let _ct = Coqtop.spawn [] in  
