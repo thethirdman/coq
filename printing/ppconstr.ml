@@ -425,7 +425,7 @@ let pr_dangling_with_for sep pr inherited a =
 
 let pr pr sep inherited a =
   let (strm,prec) = match a with
-  | CRef r -> handle C_CRef (pr_reference r), latom
+  | CRef r -> handle C_Ref (pr_reference r), latom
   | CFix (_,id,fix) ->
       handle C_CFix (hov 0 (str"fix " ++
              pr_recursive

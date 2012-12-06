@@ -205,7 +205,7 @@ val flush_all: unit -> unit
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
     | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
     | C_UnpCut | C_Name | C_GlobSort | C_CHole
-    | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl | C_CRef
+    | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl
     | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
     | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
     | C_CSort | C_CCast | C_CGeneralization | C_CDelimiters | C_CPrim

@@ -466,7 +466,6 @@ let prvect elem v = prvect_with_sep mt elem v
 
 let surround p = hov 1 (str"(" ++ p ++ str")")
 
-
 let explicit = ref false
 
 let str s = if !explicit then xmlescape (str s) else str s
@@ -474,7 +473,7 @@ let str s = if !explicit then xmlescape (str s) else str s
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
     | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
     | C_UnpCut | C_Name | C_GlobSort | C_CHole
-    | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl | C_CRef
+    | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl
     | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
     | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
     | C_CSort | C_CCast | C_CGeneralization | C_CDelimiters | C_CPrim
@@ -523,7 +522,6 @@ let handle context elt =
     | C_Patt -> "patt"
     | C_Binder -> "binder"
     | C_RecDecl -> "recdecl"
-    | C_CRef -> "ref"
     | C_CFix -> "fix"
     | C_CCoFix -> "cofix"
     | C_CProdN -> "prodn"

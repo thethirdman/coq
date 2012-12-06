@@ -54,29 +54,41 @@ let add_rule tag f =
     Hashtbl.replace code_rules tag (f fallback)
   with Not_found -> Hashtbl.add code_rules tag (f (fun _ -> raise Not_found))
 
+(** Calls the translation for an annotation type, returns a CsT.doc type *)
+let rec annot_to_doc annot =
+  match annot with
+       | Coqtop.AString s -> `Content s
+       | Coqtop.ATag (node, values) ->
+           try (((Hashtbl.find code_rules node) values):Cst.doc)
+           with Not_found -> `Seq (List.map annot_to_doc values)
+
 (** Translate a Cst.Code into a Cst.Doc, after interacting with coqtop *)
 let code_to_doc ct i_type c =
  if (i_type = Settings.IVernac) && (c <> "") then
    try
      let ret = Coqtop.get_notation (Coqtop.handle_value (Coqtop.prettyprint ct c)) in
-     let rec xml_to_code annot =
-       match annot with
-       | Coqtop.AString s -> `Content s
-       | Coqtop.ATag (node, values) ->
-           try (((Hashtbl.find code_rules node) values):Cst.doc)
-           with Not_found -> `Seq (List.map xml_to_code values)
-     in
-     `Doc (xml_to_code ret)
+     `Doc (annot_to_doc ret)
    with Invalid_argument _ -> `Doc (`Content c)
  else
    `Doc (`Content c)
 
-let _ = add_rule Pp.C_Id
-  (fun fallback args -> match args with
-    | [Coqtop.AString id] -> (print_endline ("my_id: " ^ id); (`Code [Cst.Ident
-    id]))
-    |_  -> fallback args)
+let _ =
+  let keyword_nodes = [Pp.V_Fixpoint; Pp.V_CoFixpoint] in
 
+  (** This is a generic rule for keyword printing. If the sequence starts with
+   * a string, we consider it as being a keyword. We then do the printing
+   * on the rest of the arguments
+   *)
+  let node_generic = (fun fallback args -> match args with
+    | (Coqtop.AString kw)::rest ->
+        `Seq ((`Code [Cst.Keyword kw])::(List.map annot_to_doc rest))
+    | _ -> fallback args) in
+
+  List.iter (fun e -> add_rule e node_generic) keyword_nodes;
+
+  add_rule Pp.C_Id (fun fallback args -> match args with
+    | [Coqtop.AString id] -> (`Code [Cst.Ident id])
+    |_  -> fallback args)
 
 
 (** Cst.cst -> ast *)
