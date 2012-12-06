@@ -1,7 +1,7 @@
 (** These are the options of the standalone coqdoc driver. **)
 
 (** FIXME: Please add a uniform way to produce error messages. *)
-let fatal_error msg = 
+let fatal_error msg =
   print_string msg;
   print_newline ();
   exit 1
@@ -13,8 +13,8 @@ type frontend_type =
   (** A LaTeX file that includes Coq snippets. *)
   | ICoqTeX
   (** An HTML document that includes Coq snippets. *)
-  | IHTML 
-      
+  | IHTML
+
 (** The file extension of a backend_type. *)
 let extension_of_frontend_type = function
   | IVernac -> ".v"
@@ -36,7 +36,7 @@ let string_of_frontend_type = function
 
 (** File type for output files. *)
 type backend_type =
-  (** A set of HTML documents, that refer to each other and 
+  (** A set of HTML documents, that refer to each other and
       may refer to external HTML documents. *)
   | OHTML
   (** A self-contained LaTeX document. *)
@@ -70,7 +70,7 @@ type input  = (in_channel, frontend_type) document
 
 (* FIXME: For the moment, we do not handle multiple output files...  *)
 type output = (out_channel, backend_type) document
-type io = { 
+type io = {
   mutable input      : input list;
   mutable input_type : frontend_type;
   mutable output     : output;
@@ -90,16 +90,16 @@ let default_output = {
 }
 
 (** Global settings. *)
-let io = { 
+let io = {
   input      = [ default_input ];
   output     = default_output;
   input_type = IVernac;
 }
 
 (** Load a document. *)
-let extension_of_filename fname = 
-  try 
-    let wo_ext   = Filename.chop_extension fname in 
+let extension_of_filename fname =
+  try
+    let wo_ext   = Filename.chop_extension fname in
     let len_base = String.length wo_ext in
     String.sub fname (len_base + 1) (String.length fname - len_base - 1)
   with Invalid_argument "Filename.chop_extension" ->
@@ -113,99 +113,99 @@ let load_input_document fname = try {
   (* FIXME: Use a standardize way of raising fatal errors. *)
   raise e
 
-let load_input_document fname = 
+let load_input_document fname =
   io.input <- (load_input_document fname) :: io.input
 
 (* FIXME: make a real usage doc_string *)
 let usage = "This is coqdoc ...\n\n" ^
             "Usage: " ^ Sys.argv.(0) ^ " [options] [files]\n"
 
-let print_help = 
+let print_help =
   ref false
 
 (* Option list for coqdoc *)
 (* FIXME: This should include at least all the options of the old coqdoc
-   FIXME: as well as all the options of old coqtex. 
+   FIXME: as well as all the options of old coqtex.
    FIXME: In addition, we would like an emulation mode for the old coqdoc
    FIXME: and also a wrapping of the old implementation.
 *)
 let speclist = Arg.align [
-  ("-h", Arg.Set print_help, 
+  ("-h", Arg.Set print_help,
    " Print this help message and exit.");
 
-  ("-o", Arg.String (fun s -> io.output.document_filename <- Named s), 
+  ("-o", Arg.String (fun s -> io.output.document_filename <- Named s),
    " Specify output file. If unspecified, default output will be stdout.");
 
-  ("--html", Arg.Unit (fun () -> io.output.document_type <- OHTML), 
+  ("--html", Arg.Unit (fun () -> io.output.document_type <- OHTML),
    " Produce a HTML document (default).");
 
-  ("--latex", Arg.Unit (fun () -> io.output.document_type <- OLaTeX), 
+  ("--latex", Arg.Unit (fun () -> io.output.document_type <- OLaTeX),
    " Produce a LaTeX document.");
 
-  ("--pp", Arg.Unit (fun () -> io.output.document_type <- OPrettyPrint), 
+  ("--pp", Arg.Unit (fun () -> io.output.document_type <- OPrettyPrint),
    " Produce a LaTeX document.");
   ]
 
-let print_help_if_required () = 
+let print_help_if_required () =
   if !print_help then (
-    print_string (Arg.usage_string speclist usage); 
+    print_string (Arg.usage_string speclist usage);
     exit 0
   )
 
 (** Load requested inputs. *)
 let parse_anon = function
-  | s when Sys.file_exists s -> 
+  | s when Sys.file_exists s ->
     load_input_document s
-  | x -> 
+  | x ->
     raise (Arg.Bad ("Invalid argument: " ^ x))
 
 (** Check settings consistency. *)
-let check_settings_consistency () = 
-  let rec check () = 
+let check_settings_consistency () =
+  let rec check () =
     check_output_extension_consistency ();
     check_feasible_translation ()
 
   (** Check output extension: the output document type and filename
       extension must coincide. *)
-  and check_output_extension_consistency () = 
+  and check_output_extension_consistency () =
     match io.output.document_filename with
-      | Anonymous -> 
+      | Anonymous ->
 	(** If no filename is specified, we are good. *)
 	()
-      | Named filename -> 
+      | Named filename ->
 	let extension = extension_of_filename filename in
 	let xextension = extension_of_backend_type io.output.document_type in
 	if extension <> xextension then
-	  fatal_error (Printf.sprintf 
+	  fatal_error (Printf.sprintf
 			 "The %s back-end only creates `%s' files."
 			 (string_of_backend_type io.output.document_type)
 			 xextension)
 
   (** They are a couple of front-end/back-end that are not implemented. *)
-  and check_feasible_translation () = 
-    let rec similar_inputs p is = 
+  and check_feasible_translation () =
+    let rec similar_inputs p is =
       match p, is with
-	| None, [] -> 
+	| None, [] ->
 	  fatal_error "I cannot produce a document out of nothing!"
 	| None, i :: is ->
 	  similar_inputs (Some i.document_type) is
 	| Some t, [] ->
 	  t
-	| Some t, i :: is -> 
-	  if i.document_type <> t then 
+	| Some t, i :: is ->
+	  if i.document_type <> t then
 	    fatal_error "I need all the input files to be of the same kind."
-	  else 
+	  else
 	    similar_inputs p is
     in
     let input_type = similar_inputs None io.input in
     io.input_type <- input_type;
     match input_type, io.output.document_type with
       | IHTML, (OLaTeX | OPrettyPrint) ->
-	fatal_error (Printf.sprintf 
+	fatal_error (Printf.sprintf
 		       "You cannot produce a %s document out of a %s input."
 		       (string_of_backend_type io.output.document_type)
 		       (string_of_frontend_type input_type))
-      | _ -> 
+      | _ ->
 	()
   in
   check ()
@@ -218,7 +218,7 @@ let parse () =
 
 (** Accessors *)
 let input_documents () = io.input
-let input_filename i   = i.document_filename 
+let input_filename i   = i.document_filename
 let input_channel i    = i.document_channel
 let input_type ()      = io.input_type
 let output_document () = io.output
