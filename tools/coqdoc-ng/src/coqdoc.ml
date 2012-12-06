@@ -1,10 +1,9 @@
-(* Main definition file for coqdoc *)
+(** This module contains the driver of coqdoc. 
 
-open Vernac_lexer
-open Lexing
-open Doc_lexer
-open Settings
-open Vdoc
+    This a good start to have an idea of the global architecture of the 
+    tool. 
+*)
+
 open Coqtop_handle
 
 (** Initialization. *)
