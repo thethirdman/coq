@@ -205,7 +205,8 @@ let rec xmlescape ppcmd =
   match ppcmd with
     | Ppcmd_print (len, str) ->
         Ppcmd_print (escape '"' "&quot;"
-          (escape '<' "&lt;" (escape '&' "&amp;" (len, str))))
+          (escape '>' "&gt;" (escape '<' "&lt;" (escape '&' "&amp;" (len,
+          str)))))
       (* In XML we always print whole content so we can npeek the whole stream *)
     | Ppcmd_box (x, str) ->
       Ppcmd_box (x, stream_map xmlescape str)
@@ -468,6 +469,8 @@ let surround p = hov 1 (str"(" ++ p ++ str")")
 
 let explicit = ref false
 
+let str s = if !explicit then xmlescape (str s) else str s
+
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
     | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
     | C_UnpCut | C_Name | C_GlobSort | C_CHole
@@ -499,7 +502,9 @@ type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
 let handle context elt =
   if not !explicit then elt
   else
-    let lop = "<" and rop = "</" and closing = ">" in
+    let old_str s = Stream.of_list [Ppcmd_print (utf8_length s,s)] in
+    let left_open = old_str "<" and right_open = old_str "</"
+    and closing = old_str ">" in
     let name = match context with
     | C_CNotation -> "cnotation"
     | C_Id -> "id"
@@ -632,8 +637,7 @@ let handle context elt =
     | V_Search -> "search"
     | V_Bullet -> "bullet"
     in
-    str lop ++ str name ++ str closing ++ elt ++ str rop ++ str name ++ str
-    closing
+    left_open ++ str name ++ closing ++ elt ++ right_open ++ str name ++ closing
 
 let context_of_string = function
   | "cnotation" -> C_CNotation
