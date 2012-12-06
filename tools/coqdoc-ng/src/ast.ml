@@ -56,7 +56,7 @@ let add_rule tag f =
 
 (** Translate a Cst.Code into a Cst.Doc, after interacting with coqtop *)
 let code_to_doc ct i_type c =
- if (i_type = Settings.Vdoc) && (c <> "") then
+ if (i_type = Settings.IVernac) && (c <> "") then
    try
      let ret = Coqtop.get_notation (Coqtop.handle_value (Coqtop.prettyprint ct c)) in
      let rec xml_to_code annot =
@@ -71,6 +71,14 @@ let code_to_doc ct i_type c =
  else
    `Doc (`Content c)
 
+let _ = add_rule Pp.C_Id
+  (fun fallback args -> match args with
+    | [Coqtop.AString id] -> (print_endline ("my_id: " ^ id); (`Code [Cst.Ident
+    id]))
+    |_  -> fallback args)
+
+
+
 (** Cst.cst -> ast *)
 let rec translate ct i_type cst =
   let rec aux elt acc = match elt with
@@ -81,3 +89,12 @@ let rec translate ct i_type cst =
 
 (* Evaluates the queries of an ast *)
 let rec eval ast = assert false
+  (*let aux : with_query -> no_query = function
+    #no_query as q -> q
+    | `Query (name, arglist) ->
+        try
+          `Doc ((Hashtbl.find symbol_table name) () arglist)
+        with Not_found -> Printf.fprintf stderr "Error: Invalid query \"%s\"\n"
+        name; exit 1
+  in
+  List.map aux ast*)
