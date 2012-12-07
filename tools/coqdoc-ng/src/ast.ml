@@ -62,15 +62,25 @@ let rec annot_to_doc annot =
            try (((Hashtbl.find code_rules node) values):Cst.doc)
            with Not_found -> `Seq (List.map annot_to_doc values)
 
+(** This function is used when we want to distinguish simple strings or
+ * keywords from symbols
+ *)
+let maybe_symbol f str =
+  if Str.string_match (Str.regexp "[^a-zA-Z]+") str 0 then
+    Cst.Symbol str
+  else
+    f str
+
 (** Translate a Cst.Code into a Cst.Doc, after interacting with coqtop *)
 let code_to_doc ct i_type c =
+  `Doc (
  if (i_type = Settings.IVernac) && (c <> "") then
    try
      let ret = Coqtop.get_notation (Coqtop.handle_value (Coqtop.prettyprint ct c)) in
-     `Doc (annot_to_doc ret)
-   with Invalid_argument _ -> `Doc (`Code [Cst.NoFormat c])
+     (annot_to_doc ret)
+   with Invalid_argument _ -> `Code [maybe_symbol (fun e -> Cst.NoFormat e) c]
  else
-   `Doc (`Code [Cst.NoFormat c])
+   `Code [Cst.NoFormat c])
 
 (** We add the rules for syntactic coloration *)
 let _ =
@@ -85,8 +95,9 @@ let _ =
      *)
     let node_generic = (fun fallback args ->
         `Seq (List.map
-          (function Coqtop.AString s -> `Code [Cst.Keyword s]
-                    | ann -> annot_to_doc ann) args)) in
+          (function
+            Coqtop.AString s -> `Code [maybe_symbol (fun e -> Cst.Keyword e) s]
+            | ann -> annot_to_doc ann) args)) in
     List.iter (fun e -> add_rule e node_generic) keyword_nodes;
 
     (** Rules for identifiers *)

@@ -9,7 +9,7 @@ type raw_content = { latex : string; latex_math : string; html : string}
 
 (* Type for code elements *)
 type code =  Keyword of string | Ident of string | Literal of string
-            | NoFormat of string
+            | Symbol of string | NoFormat of string
 
 (* Doc data-type, first level of documentation representation *)
 type doc = [
