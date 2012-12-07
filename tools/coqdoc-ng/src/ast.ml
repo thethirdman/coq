@@ -57,7 +57,7 @@ let add_rule tag f =
 (** Calls the translation for an annotation type, returns a CsT.doc type *)
 let rec annot_to_doc annot =
   match annot with
-       | Coqtop.AString s -> `Content s
+       | Coqtop.AString s -> `Code [Cst.NoFormat s]
        | Coqtop.ATag (node, values) ->
            try (((Hashtbl.find code_rules node) values):Cst.doc)
            with Not_found -> `Seq (List.map annot_to_doc values)
@@ -68,27 +68,41 @@ let code_to_doc ct i_type c =
    try
      let ret = Coqtop.get_notation (Coqtop.handle_value (Coqtop.prettyprint ct c)) in
      `Doc (annot_to_doc ret)
-   with Invalid_argument _ -> `Doc (`Content c)
+   with Invalid_argument _ -> `Doc (`Code [Cst.NoFormat c])
  else
-   `Doc (`Content c)
+   `Doc (`Code [Cst.NoFormat c])
 
+(** We add the rules for syntactic coloration *)
 let _ =
-  let keyword_nodes = [Pp.V_Fixpoint; Pp.V_CoFixpoint] in
+  begin
+    let open Pp in
+    let keyword_nodes = [V_Fixpoint; V_CoFixpoint; V_Definition; V_Inductive;
+    V_CheckMayEval; C_CLetIn; C_CNotation; C_UnpTerminal; C_CProdN ] in
 
-  (** This is a generic rule for keyword printing. If the sequence starts with
-   * a string, we consider it as being a keyword. We then do the printing
-   * on the rest of the arguments
-   *)
-  let node_generic = (fun fallback args -> match args with
-    | (Coqtop.AString kw)::rest ->
-        `Seq ((`Code [Cst.Keyword kw])::(List.map annot_to_doc rest))
-    | _ -> fallback args) in
+    (** This is a generic rule for keyword printing. If the sequence starts with
+     * a string, we consider it as being a set of keywords. We then do the printing
+     * on the rest of the arguments
+     *)
+    let node_generic = (fun fallback args ->
+        `Seq (List.map
+          (function Coqtop.AString s -> `Code [Cst.Keyword s]
+                    | ann -> annot_to_doc ann) args)) in
+    List.iter (fun e -> add_rule e node_generic) keyword_nodes;
 
-  List.iter (fun e -> add_rule e node_generic) keyword_nodes;
+    (** Rules for identifiers *)
+    let id_types = [C_Id; C_Ref] in
+    let id_print = (fun fallback args -> match args with
+        | [Coqtop.AString id] -> (`Code [Cst.Ident id])
+      |_  -> fallback args) in
+    List.iter (fun e -> add_rule e id_print) id_types;
 
-  add_rule Pp.C_Id (fun fallback args -> match args with
-    | [Coqtop.AString id] -> (`Code [Cst.Ident id])
-    |_  -> fallback args)
+      (** Rules for literals *)
+    let lit_types = [C_CPrim; C_GlobSort] in
+    let lit_rule = (fun fallback args -> match args with
+        | [Coqtop.AString lit] -> (`Code [Cst.Literal lit])
+        |_ -> fallback args) in
+    List.iter (fun e -> add_rule e lit_rule) lit_types
+  end
 
 
 (** Cst.cst -> ast *)

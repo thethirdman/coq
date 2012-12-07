@@ -415,7 +415,7 @@ let pr_forall () = str"forall" ++ spc ()
 
 let pr_fun () = str"fun" ++ spc ()
 
-let pr_fun_sep = str " =>"
+let pr_fun_sep () = str " =>"
 
 
 let pr_dangling_with_for sep pr inherited a =
@@ -449,7 +449,7 @@ let pr pr sep inherited a =
       handle C_CLambdaN (hov 0 (
         hov 2 (pr_delimited_binders pr_fun spc
                 (pr mt ltop) bl) ++
-	       pr_fun_sep ++ pr spc ltop a)),
+	       pr_fun_sep () ++ pr spc ltop a)),
       llambda
   | CLetIn (_,(_,Name x),(CFix(_,(_,x'),[_])|CCoFix(_,(_,x'),[_]) as fx), b)
       when x=x' ->

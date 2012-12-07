@@ -469,6 +469,8 @@ let surround p = hov 1 (str"(" ++ p ++ str")")
 let explicit = ref false
 
 let str s = if !explicit then xmlescape (str s) else str s
+let qstring s = str ("\""^escape_string s^"\"")
+let qs = qstring
 
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
     | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
