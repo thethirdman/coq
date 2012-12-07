@@ -639,6 +639,7 @@ let handle context elt =
     in
     left_open ++ str name ++ closing ++ elt ++ right_open ++ str name ++ closing
 
+exception Context_error of string
 let context_of_string = function
   | "cnotation" -> C_CNotation
   | "id" -> C_Id
@@ -769,4 +770,4 @@ let context_of_string = function
   | "endsubproof" -> V_EndSubproof
   | "search" -> V_Search
   | "bullet" -> V_Bullet
-  | s -> raise (Invalid_argument ("Context: \"" ^ s ^ "\" not found"))
+  | s -> raise (Context_error ("Context: \"" ^ s ^ "\" not found"))

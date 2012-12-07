@@ -232,6 +232,8 @@ type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
 
 val explicit : bool ref
 val handle : context_handler -> std_ppcmds -> std_ppcmds
+
+exception Context_error of string
 val context_of_string : string -> context_handler
 
 
