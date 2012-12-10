@@ -66,28 +66,29 @@ let rec annot_to_doc annot =
  * keywords from symbols
  *)
 let maybe_symbol f str =
-  if Str.string_match (Str.regexp "[^a-zA-Z]+") str 0 then
+  if Str.string_match (Str.regexp "^[^a-zA-Z]+$") str 0 then
     Cst.Symbol str
   else
     f str
 
 (** Translate a Cst.Code into a Cst.Doc, after interacting with coqtop *)
 let code_to_doc ct i_type c =
-  `Doc (
  if (i_type = Settings.IVernac) && (c <> "") then
    try
      let ret = Coqtop.get_notation (Coqtop.handle_value (Coqtop.prettyprint ct c)) in
-     (annot_to_doc ret)
-   with Invalid_argument _ -> `Code [maybe_symbol (fun e -> Cst.NoFormat e) c]
+     `Doc (`Seq (List.map annot_to_doc ret))
+   with Invalid_argument _ -> `Doc (`Code [maybe_symbol (fun e -> Cst.NoFormat
+   e) c])
  else
-   `Code [Cst.NoFormat c])
+       `Doc (`Code [Cst.NoFormat c])
 
 (** We add the rules for syntactic coloration *)
 let _ =
   begin
     let open Pp in
     let keyword_nodes = [V_Fixpoint; V_CoFixpoint; V_Definition; V_Inductive;
-    V_CheckMayEval; C_CLetIn; C_CNotation; C_UnpTerminal; C_CProdN ] in
+    V_Proof; V_Assumption; V_Solve; V_EndProof; V_CheckMayEval;
+    V_StartTheoremProof; C_CLetIn; C_CNotation; C_UnpTerminal; C_CProdN ] in
 
     (** This is a generic rule for keyword printing. If the sequence starts with
      * a string, we consider it as being a set of keywords. We then do the printing
@@ -112,7 +113,20 @@ let _ =
     let lit_rule = (fun fallback args -> match args with
         | [Coqtop.AString lit] -> (`Code [Cst.Literal lit])
         |_ -> fallback args) in
-    List.iter (fun e -> add_rule e lit_rule) lit_types
+    List.iter (fun e -> add_rule e lit_rule) lit_types;
+
+    add_rule V_Solve (fun fallback args -> match args with
+      | [Coqtop.AString lit] -> fallback [Coqtop.AString ("    " ^ lit)]
+      | _ -> fallback args);
+    (*let no_nl = [C_UnpMetaVar; C_UnpListMetaVar; C_UnpBox; C_UnpTerminal;
+        C_UnpCut;] in
+    let rec rm_newline = (fun fallback args ->
+      let nl = Str.regexp "\n" in
+      match args with
+        | [Coqtop.AString s] -> fallback [Coqtop.AString (Str.global_replace nl
+        "" s)]
+        | _ -> fallback (List.map (rm_newline fallback) args)) in
+    List.iter (fun e -> add_rule e rm_newline) no_nl;*)
   end
 
 
