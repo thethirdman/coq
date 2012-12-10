@@ -86,14 +86,12 @@ let code_to_doc ct i_type c =
 let _ =
   begin
     let open Pp in
+    (** This is a generic rule for keyword printing. We consider all the
+     * string elements of an expression as being keywords.
+     *)
     let keyword_nodes = [V_Fixpoint; V_CoFixpoint; V_Definition; V_Inductive;
     V_Proof; V_Assumption; V_Solve; V_EndProof; V_CheckMayEval;
     V_StartTheoremProof; C_CLetIn; C_CNotation; C_UnpTerminal; C_CProdN ] in
-
-    (** This is a generic rule for keyword printing. If the sequence starts with
-     * a string, we consider it as being a set of keywords. We then do the printing
-     * on the rest of the arguments
-     *)
     let node_generic = (fun fallback args ->
         `Seq (List.map
           (function
@@ -115,18 +113,10 @@ let _ =
         |_ -> fallback args) in
     List.iter (fun e -> add_rule e lit_rule) lit_types;
 
+    (** Rule for tactics *)
     add_rule V_Solve (fun fallback args -> match args with
-      | [Coqtop.AString lit] -> fallback [Coqtop.AString ("    " ^ lit)]
+      | [Coqtop.AString lit] -> `Code [Cst.Tactic lit]
       | _ -> fallback args);
-    (*let no_nl = [C_UnpMetaVar; C_UnpListMetaVar; C_UnpBox; C_UnpTerminal;
-        C_UnpCut;] in
-    let rec rm_newline = (fun fallback args ->
-      let nl = Str.regexp "\n" in
-      match args with
-        | [Coqtop.AString s] -> fallback [Coqtop.AString (Str.global_replace nl
-        "" s)]
-        | _ -> fallback (List.map (rm_newline fallback) args)) in
-    List.iter (fun e -> add_rule e rm_newline) no_nl;*)
   end
 
 
