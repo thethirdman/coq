@@ -503,7 +503,7 @@ type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
 let handle context elt =
   if not !explicit then elt
   else
-    let old_str s = Stream.of_list [Ppcmd_print (utf8_length s,s)] in
+    let old_str s = Stream.of_list [Ppcmd_print (0,s)] in
     let left_open = old_str "<" and right_open = old_str "</"
     and closing = old_str ">" in
     let name = match context with
@@ -637,7 +637,7 @@ let handle context elt =
     | V_Search -> "search"
     | V_Bullet -> "bullet"
     in
-    left_open ++ str name ++ closing ++ elt ++ right_open ++ str name ++ closing
+    left_open ++ old_str name ++ closing ++ elt ++ right_open ++ old_str name ++ closing
 
 exception Context_error of string
 let context_of_string = function

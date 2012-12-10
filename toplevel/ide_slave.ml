@@ -287,12 +287,18 @@ let locate s =
 (* Pretty prints coq code: marks it up with Xml tags corresponding to
  * its semantic value (Id/constrexpr/vernacexpr)
  *)
-let prettyprint s =
+let rec prettyprint s =
+  let len = String.length s in
   Pp.explicit := true;
   let pa = Pcoq.Gram.parsable (Stream.of_string s) in
-  let (_,ast) = Vernac.parse_sentence (pa,None) in
+  let (loc,ast) = Vernac.parse_sentence (pa,None) in
+  let last_parse = snd (Loc.unloc loc) in
   let ret = Pp.string_of_ppcmds (Ppvernac.pr_vernac ast) in
-  Pp.explicit := false; ret
+  Pp.explicit := false;
+  if last_parse < len then (** If the string we obtain is not fully parsed *)
+    ret ^ "\n" ^ (prettyprint (String.sub s (last_parse) (len - last_parse)))
+  else
+    ret
 
 (** When receiving the Quit call, we don't directly do an [exit 0],
     but rather set this reference, in order to send a final answer
