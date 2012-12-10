@@ -168,15 +168,23 @@ type annot =
  *)
 let get_notation str =
   let p = Xml_parser.make (Xml_parser.SString str) in
+  (** We encapsulate the response string into a tag in order to parse
+   * the full xml hierarchy *)
+  let p = Xml_parser.make (Xml_parser.SString ("<xml>" ^ str ^ "</xml>")) in
   let xml_query = Xml_parser.parse p in
   let rec translate = function (* Xml -> annot *)
     PCData s -> AString s
     | Element (name, [], xml) -> (* We do not accept attributes *)
         ATag (Pp.context_of_string name, List.map translate xml)
     | Element (name,_,_) ->
-        raise (Xml_error ("Invalid formated tag: " ^ name ^ "\n"))
+        raise (Xml_error ("Invalid formated tag: " ^ name ^ "\n")) in
 
-  in translate xml_query
+  (** This function unboxes the xml tag *)
+  let un_xml = function
+    |Element ("xml", [], xml) -> List.map translate xml
+    | _ -> raise (Xml_error "Could not de-encapsulate xml tag")
+
+  in un_xml xml_query
 
 (** Generic function for annotation map/fold.
  * Takes a merge function with the type 'a list -> 'a
