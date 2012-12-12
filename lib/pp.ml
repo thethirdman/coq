@@ -483,5 +483,3 @@ let str s = if Xml_pp.is_semistructured_pp () then xmlescape (str s) else str s
 let qstring s = str ("\""^escape_string s^"\"")
 let qs = qstring
 
-
-

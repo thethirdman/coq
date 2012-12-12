@@ -5,6 +5,7 @@ Pp_control
 Loc
 Compat
 Flags
+Xml_pp
 Pp
 Segmenttree
 Unicodetable

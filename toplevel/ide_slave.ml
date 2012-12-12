@@ -290,13 +290,25 @@ let locate s =
     concrete syntax tree and the nature of its nodes. This piece of
     information is useful to produce formatted code in coqdoc and
     coqide. *)
-let prettyprint s =
+let rec prettyprint s =
+  let len = String.length s in
   Xml_pp.enable_semistructured_pp ();
   let pa = Pcoq.Gram.parsable (Stream.of_string s) in
-  let (_,ast) = Vernac.parse_sentence (pa,None) in
+  let (loc,ast) = Vernac.parse_sentence (pa,None) in
+  let last_parse = snd (Loc.unloc loc) in
   let ret = Pp.string_of_ppcmds (Ppvernac.pr_vernac ast) in
   Xml_pp.enable_flat_pp ();
-  ret
+  if last_parse < len then 
+    (** If the string we obtain is not fully parsed, we
+	continue on the part of the string that was not
+	consumed by the parser. *)
+    (* FIXME: Should we use Buffer to improve the following
+       FIXME: code? *)
+    ret 
+    ^ "\n" 
+    ^ (prettyprint (String.sub s (last_parse) (len - last_parse)))
+  else
+    ret
 
 (** When receiving the Quit call, we don't directly do an [exit 0],
     but rather set this reference, in order to send a final answer
