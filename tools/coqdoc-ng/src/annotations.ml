@@ -135,15 +135,16 @@ let _ =
     add_rule V_Solve (fun fallback args -> match args with
       | [AString lit] -> `Code [Cst.Tactic lit]
       | _ -> fallback args);
+
   end
 
 
 (** Does the full translation from vernac to doc type *)
 let doc_of_vernac ct code =
   let ret =
-    try
+    (try
       let annot_lst = annot_of_vernac ct code in
         `Seq (List.map doc_of_annot annot_lst)
       with Invalid_argument _ ->
-        `Code [maybe_symbol (fun e -> Cst.NoFormat e) code] in
+        `Code [maybe_symbol (fun e -> Cst.NoFormat e) code]) in
     `Doc ret

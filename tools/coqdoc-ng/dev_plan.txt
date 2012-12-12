@@ -11,6 +11,7 @@ o 0.1: Squelette
       -> Gestion des identifiant avec locate (contexte notamment)
       -> Gerer le printing des symboles tels que '->' ou '/\'
       -> Multifichier ?
+      -> Patcher le type cst.doc: `Item, `List, `Seq ...
 [TODO]
 o 0.1: Version préliminaire
       -> Possède juste la traduction .v -> .html
