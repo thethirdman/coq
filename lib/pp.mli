@@ -175,6 +175,9 @@ val surround : std_ppcmds -> std_ppcmds
 
 val pr_vertical_list : ('b -> std_ppcmds) -> 'b list -> std_ppcmds
 
+(** [pr_tag t s] adds [<t>] in front of [s] and [</t>] after [s]. *)
+val pr_tag : string -> std_ppcmds -> std_ppcmds
+
 (** {6 Low-level pretty-printing functions {% \emph{%}without flush{% }%}. } *)
 
 val pp_with : Format.formatter -> std_ppcmds -> unit
@@ -193,47 +196,6 @@ val pperrnl : std_ppcmds -> unit
 val pperr_flush : unit -> unit
 val pp_flush : unit -> unit
 val flush_all: unit -> unit
-
-(** Modify pretty printing for Xml output:
-  * We chose to do std_ppcmds -> std_ppcmds translation for the sake
-  * of simplicity. This way, we just have to annotate the pp[constr|vernac]
-  * with the type needed.
-  * An interesting improvement would be to translate to the XML type, but
-  * this requires a lot more code modifications
-  *)
-
-type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
-    | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
-    | C_UnpCut | C_Name | C_GlobSort | C_CHole
-    | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl
-    | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
-    | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
-    | C_CSort | C_CCast | C_CGeneralization | C_CDelimiters | C_CPrim
-    | V_AbortAll | V_Restart | V_Unfocus | V_Unfocused | V_Goal | V_Abort
-    | V_Undo | V_UndoTo | V_Backtrack | V_Focus | V_Show | V_CheckGuard
-    | V_ResetName | V_ResetInitial | V_Back | V_BackTo | V_WriteState
-    | V_RestoreState | V_List | V_Load | V_Time | V_Timeout | V_Fail
-    | V_TacticNotation | V_OpenCloseScope | V_Delimiters | V_BindScope
-    | V_ArgumentScope | V_Infix | V_Notation | V_SyntaxExtension
-    | V_Definition | V_StartTheoremProof | V_EndProof | V_ExactProof
-    | V_Assumption | V_Inductive | V_Fixpoint | V_CoFixpoint | V_Scheme
-    | V_CombinedScheme | V_BeginSection | V_EndSegment | V_Require | V_Import
-    | V_Canonical | V_Coercion | V_IdentityCoercion | V_Instance | V_Context
-    | V_DeclareInstances | V_DeclareClass | V_DefineModule | V_DeclareModule
-    | V_DeclareModuleType | V_Include | V_Solve | V_SolveExistential
-    | V_RequireFrom | V_AddLoadPath | V_RemoveLoadPath | V_AddMLPath
-    | V_DeclareMLModule | V_Chdir | V_DeclareTacticDefinition | V_CreateHintDb
-    | V_RemoveHints | V_Hints | V_SyntacticDefinition | V_DeclareImplicits
-    | V_Arguments | V_Reserve | V_Generalizable | V_SetOpacity | V_UnsetOption
-    | V_SetOption | V_AddOption | V_RemoveOption | V_MemOption | V_PrintOption
-    | V_CheckMayEval | V_GlobalCheck | V_DeclareReduction | V_Print | V_Locate
-    | V_Comments | V_ToplevelControl | V_Extend | V_Proof | V_ProofMode
-    | V_Subproof | V_EndSubproof | V_Search | V_Bullet
-
-val explicit : bool ref
-val handle : context_handler -> std_ppcmds -> std_ppcmds
-val context_of_string : string -> context_handler
-
 
 (** {6 Deprecated functions} *)
 

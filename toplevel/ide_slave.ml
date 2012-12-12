@@ -284,15 +284,19 @@ let locate s =
             s)))))))
   with Loc.Exc_located (_,Nametab.GlobalizationError q) -> None
 
-(* Pretty prints coq code: marks it up with Xml tags corresponding to
- * its semantic value (Id/constrexpr/vernacexpr)
- *)
+(** [prettyprint s] asks for a pretty-printed representation of the
+    source code [s]. This representation is annotated by tags defined
+    in {Xml_pp} that witness the hierarchical structure of the
+    concrete syntax tree and the nature of its nodes. This piece of
+    information is useful to produce formatted code in coqdoc and
+    coqide. *)
 let prettyprint s =
-  Pp.explicit := true;
+  Xml_pp.enable_semistructured_pp ();
   let pa = Pcoq.Gram.parsable (Stream.of_string s) in
   let (_,ast) = Vernac.parse_sentence (pa,None) in
   let ret = Pp.string_of_ppcmds (Ppvernac.pr_vernac ast) in
-  Pp.explicit := false; ret
+  Xml_pp.enable_flat_pp ();
+  ret
 
 (** When receiving the Quit call, we don't directly do an [exit 0],
     but rather set this reference, in order to send a final answer
