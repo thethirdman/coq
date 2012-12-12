@@ -473,8 +473,8 @@ let qstring s = str ("\""^escape_string s^"\"")
 let qs = qstring
 
 type context_handler = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
-    | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
-    | C_UnpCut | C_Name | C_GlobSort | C_CHole
+    | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal
+    | C_Name | C_GlobSort | C_CHole
     | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl
     | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
     | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
@@ -514,8 +514,6 @@ let handle context elt =
     | C_UnpListMetaVar -> "unplistmetavar"
     | C_UnpBinderListMetaVar -> "unpbinderlistmetavar"
     | C_UnpTerminal -> "unpterminal"
-    | C_UnpBox -> "unpbox"
-    | C_UnpCut -> "unpcut"
     | C_Name   -> "name"
     | C_GlobSort -> "globsort"
     | C_CHole -> "hole"
@@ -648,8 +646,6 @@ let context_of_string = function
   | "unplistmetavar" -> C_UnpListMetaVar
   | "unpbinderlistmetavar" -> C_UnpBinderListMetaVar
   | "unpterminal" -> C_UnpTerminal
-  | "unpbox" -> C_UnpBox
-  | "unpcut" -> C_UnpCut
   | "name" -> C_Name
   | "globsort" -> C_GlobSort
   | "hole" -> C_CHole
