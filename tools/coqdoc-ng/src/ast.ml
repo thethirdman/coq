@@ -31,15 +31,42 @@ let rec extract_queries = function
   `Query (name, arglist) -> `Query (name, arglist)
   | d -> `Doc d
 
+(** This function sets up the necessary rules in order to
+ * locate identifiers and translate them into cst.doc *)
+let initialize =
+  let initialized = ref false in
+  (fun ct ->
+  if not !initialized then
+    (let id_manage = (fun fallback args -> match args with
+      | [Annotations.AString id] ->
+          begin match Hyperlinks.handle_id ct id with
+          None -> fallback args
+          | Some (`Root (name, path)) -> `Root (fallback args, path)
+          | Some (`Link (name, path)) -> `Link (fallback args, path)
+          end
+      | _ -> fallback args) in
+    List.iter (fun e -> Annotations.add_rule e id_manage) [Pp.C_Id; Pp.C_Ref];
+    initialized := true)
+  else
+    ())
+
+(** Does the translation from code to doc *)
+let handle_code ct i_type code =
+  initialize ct;
+  if i_type = Settings.IVernac then
+    (** We first evaluate the code in order to manage the identifiers *)
+    begin
+      ignore (Coqtop.interp ct Coqtop.default_logger code);
+      Annotations.doc_of_vernac ct code
+    end
+  else
+    `Doc (`Content code)
+
 (** Cst.cst -> ast *)
 let rec translate ct i_type cst =
   let rec aux elt acc = match elt with
     Cst.Doc d    -> (extract_queries d)::acc
-    | Cst.Code code ->
-        let result =
-          if i_type = Settings.IVernac then Annotations.doc_of_vernac ct code
-          else `Doc (`Content code) in
-        result::acc
+    | Cst.Code code -> (handle_code ct i_type code)::acc
     | _          -> acc (* FIXME: real type *) in
     List.fold_right aux cst []
 

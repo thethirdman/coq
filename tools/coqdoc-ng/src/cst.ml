@@ -21,10 +21,17 @@ type doc = [
   | `Section of (int*string)
   | `Item of (int*doc) (* List in coqdoc *)
   | `Hrule
-  | `Emphasis of doc (*FIXME: replace with type doc *)
+  | `Emphasis of doc
   | `Raw of raw_content
   | `Verbatim of string
   | `Content of string
+
+  (** Type for hyperlinks:
+    * - A Root defines the destination of a link
+    * - A Link defines a reference to a root
+    *)
+  | `Root of (doc * string) (** name_to_show * reference *)
+  | `Link of (doc * string)
   (* Type for documentation lists *)
   | `List of doc list
   (* Type for formatted code output: list of code elements *)
