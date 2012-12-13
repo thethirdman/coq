@@ -31,7 +31,9 @@
 
   let get_flush () =
     let str = Buffer.contents buff in
-    Buffer.clear buff; Queue.push (CONTENT str) tokens
+    Buffer.clear buff;
+    if str <> "" then
+        Queue.push (CONTENT str) tokens
 
   let tok_lst =
     [("[",STARTVERNAC);
@@ -63,7 +65,7 @@ let sp_nl = sp | nl (* Space or newline *)
 let name = ['a'-'z''A'-'Z''0'-'9']+
 
 rule lex_doc = parse
-  (tok_reg as tok) {get_flush ();
+  sp_nl* (tok_reg as tok) sp_nl* {get_flush ();
                 Queue.push (Hashtbl.find tok_htbl tok) tokens;
                Queue.pop tokens}
 | '@' (name as query) '{' (_* as arglist) '}'
@@ -72,7 +74,7 @@ rule lex_doc = parse
   {get_flush ();
     Queue.push (SECTION ((String.length lvl), title)) tokens; Queue.pop tokens}
 | nl (sp* as lvl) "- " {get_flush ();
-  let depth = String.length lvl in 
+  let depth = String.length lvl in
   if depth > (get_lvl ()) then (* New sublist *)
     (Queue.push (LST depth) tokens; Queue.push ITEM tokens;
     push depth;
@@ -85,7 +87,10 @@ rule lex_doc = parse
     Queue.pop tokens)
   else (* Another item *)
     (Queue.push ITEM tokens; Queue.pop tokens)}
-
+| "remove" sp+ "printing" ([^' ''\t']+ as tok) sp+
+  {get_flush (); Queue.push (RM_TOKEN tok) tokens; Queue.pop tokens}
+| "printing" sp+ ([^' ''\t']+ as tok) sp+
+  {get_flush (); Queue.push (ADD_TOKEN tok) tokens; Queue.pop tokens}
 | nl as n { Buffer.add_string buff n; lex_doc lexbuf }
 
 | eof { (if (Buffer.length buff <> 0) then get_flush ()); treat_eof ()}

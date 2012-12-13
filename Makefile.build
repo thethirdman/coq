@@ -546,7 +546,11 @@ NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo \
 			 lib/pp_control.cmo lib/pp.cmo lib/xml_utils.cmo        \
 	$(addprefix tools/coqdoc-ng/src/, \
 	coqtop_handle.cmo settings.cmo cst.cmo hyperlinks.cmo annotations.cmo \
-	ast.cmo	doc_lexer.cmo vernac_lexer.cmo parser.cmo vdoc.cmo coqdoc.cmo)
+	ast.cmo html.cmo	doc_lexer.cmo vernac_lexer.cmo parser.cmo vdoc.cmo coqdoc.cmo)
+
+tools/coqdoc-ng/src/parser.ml tools/coqdoc-ng/src/parser.mli:
+	$(SHOW)'coqdoc cmo'
+	$(OCAMLOPT) -c $(MLINCLUDES) $(OPTFLAGS) $<
 
 tools/coqdoc-ng/src/coqdoc.cmo: tools/coqdoc-ng/src/coqdoc.ml
 	$(SHOW)'coqdoc cmo'
@@ -896,9 +900,9 @@ endif
 	$(HIDE)$(OCAMLLEX) -o $@ "$*.mll"
 
 
-%.ml %.mli: %.mly
-	$(SHOW)'OCAMLYACC $<'
-	$(HIDE)$(OCAMLYACC) $<
+# %.ml %.mli: %.mly
+# 	$(SHOW)'OCAMLYACC $<'
+# 	$(HIDE)$(OCAMLYACC) $<
 
 plugins/%_mod.ml: plugins/%.mllib
 	$(SHOW)'ECHO... > $@'

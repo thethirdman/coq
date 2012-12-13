@@ -7,6 +7,7 @@ type token =
   | STARTDOC
   | STARTCOM
   | SECTION of (int*string)
+  | RM_TOKEN of (string)
   | QUERY of (string*string)
   | LST of (int)
   | LATEX_MATH
@@ -22,6 +23,7 @@ type token =
   | ENDCOM
   | EMPHASIS
   | CONTENT of (string)
+  | ADD_TOKEN of (string)
 
 
 val parse_doc: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (Cst.doc)
