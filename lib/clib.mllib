@@ -1,5 +1,6 @@
 Int
 Pp_control
+Xml_pp
 Pp
 Coq_config
 Deque

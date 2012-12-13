@@ -45,7 +45,7 @@ let initialize =
           | Some (`Link (name, path)) -> `Link (fallback args, path)
           end
       | _ -> fallback args) in
-    List.iter (fun e -> Annotations.add_rule e id_manage) [Pp.C_Id; Pp.C_Ref];
+    List.iter (fun e -> Annotations.add_rule e id_manage) [Xml_pp.C_Id; Xml_pp.C_Ref];
     initialized := true)
   else
     ())

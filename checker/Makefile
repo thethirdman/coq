@@ -23,7 +23,8 @@ validate.cmo \
 
 MCHECKER:=\
   $(COQSRC)/config/coq_config.cmo \
-  $(COQSRC)/lib/pp_control.cmo $(COQSRC)/lib/pp.cmo $(COQSRC)/lib/compat.cmo \
+  $(COQSRC)/lib/pp_control.cmo $(COQSRC)/lib/xml_pp.cmo \
+  $(COQSRC)/lib/pp.cmo $(COQSRC)/lib/compat.cmo \
   $(COQSRC)/lib/util.cmo $(COQSRC)/lib/option.cmo $(COQSRC)/lib/hashcons.cmo \
   $(COQSRC)/lib/system.cmo $(COQSRC)/lib/flags.cmo \
   $(COQSRC)/lib/predicate.cmo $(COQSRC)/lib/rtree.cmo \

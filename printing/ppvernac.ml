@@ -7,6 +7,7 @@
 (************************************************************************)
 
 open Pp
+open Xml_pp
 open Names
 
 (* open Compat *)
@@ -22,6 +23,8 @@ open Constrexpr
 open Constrexpr_ops
 open Decl_kinds
 open Declaremods
+
+let tag = Xml_pp.tag_with_context pr_tag
 
 let pr_spc_lconstr = pr_sep_com spc pr_lconstr_expr
 
@@ -489,20 +492,20 @@ in
 let rec pr_vernac = function
 
   (* Proof management *)
-  | VernacAbortAll -> handle V_AbortAll (str "Abort All")
-  | VernacRestart -> handle V_Restart (str"Restart")
-  | VernacUnfocus -> handle V_Unfocus (str"Unfocus")
-  | VernacUnfocused -> handle V_Unfocused (str"Unfocused")
-  | VernacGoal c -> handle V_Goal (str"Goal" ++ pr_lconstrarg c)
-  | VernacAbort id -> handle V_Abort (str"Abort" ++ pr_opt pr_lident id)
-  | VernacUndo i -> handle V_Undo (if Int.equal i 1 then str"Undo" else
+  | VernacAbortAll -> tag V_AbortAll (str "Abort All")
+  | VernacRestart -> tag V_Restart (str"Restart")
+  | VernacUnfocus -> tag V_Unfocus (str"Unfocus")
+  | VernacUnfocused -> tag V_Unfocused (str"Unfocused")
+  | VernacGoal c -> tag V_Goal (str"Goal" ++ pr_lconstrarg c)
+  | VernacAbort id -> tag V_Abort (str"Abort" ++ pr_opt pr_lident id)
+  | VernacUndo i -> tag V_Undo (if Int.equal i 1 then str"Undo" else
     str"Undo" ++ pr_intarg i)
-  | VernacUndoTo i -> handle V_UndoTo (str"Undo" ++ spc() ++ str"To" ++
+  | VernacUndoTo i -> tag V_UndoTo (str"Undo" ++ spc() ++ str"To" ++
   pr_intarg i)
   | VernacBacktrack (i,j,k) ->
-      handle V_Backtrack (str "Backtrack" ++  spc() ++ prlist_with_sep sep int
+      tag V_Backtrack (str "Backtrack" ++  spc() ++ prlist_with_sep sep int
       [i;j;k])
-  | VernacFocus i -> handle V_Focus (str"Focus" ++ pr_opt int i)
+  | VernacFocus i -> tag V_Focus (str"Focus" ++ pr_opt int i)
   | VernacShow s ->
       let pr_goal_reference = function
         | OpenSubgoals -> mt ()
@@ -520,57 +523,57 @@ let rec pr_vernac = function
 	| ShowIntros b -> str"Show " ++ (if b then str"Intros" else str"Intro")
 	| ShowMatch id -> str"Show Match " ++ pr_lident id
 	| ShowThesis -> str "Show Thesis"
-      in handle V_Show (pr_showable s)
-  | VernacCheckGuard -> handle V_CheckGuard (str"Guarded")
+      in tag V_Show (pr_showable s)
+  | VernacCheckGuard -> tag V_CheckGuard (str"Guarded")
 
   (* Resetting *)
-  | VernacResetName id -> handle V_ResetName (str"Reset" ++ spc() ++ pr_lident id)
-  | VernacResetInitial -> handle V_ResetInitial (str"Reset Initial")
-  | VernacBack i -> handle V_Back (if Int.equal i 1 then str"Back" else
+  | VernacResetName id -> tag V_ResetName (str"Reset" ++ spc() ++ pr_lident id)
+  | VernacResetInitial -> tag V_ResetInitial (str"Reset Initial")
+  | VernacBack i -> tag V_Back (if Int.equal i 1 then str"Back" else
     str"Back" ++ pr_intarg i)
-  | VernacBackTo i -> handle V_BackTo (str"BackTo" ++ pr_intarg i)
+  | VernacBackTo i -> tag V_BackTo (str"BackTo" ++ pr_intarg i)
 
   (* State management *)
-  | VernacWriteState s -> handle V_WriteState (str"Write State" ++ spc () ++ qs
+  | VernacWriteState s -> tag V_WriteState (str"Write State" ++ spc () ++ qs
   s)
-  | VernacRestoreState s -> handle V_RestoreState (str"Restore State" ++ spc()
+  | VernacRestoreState s -> tag V_RestoreState (str"Restore State" ++ spc()
   ++ qs s)
 
   (* Control *)
   | VernacList l ->
-      handle V_List (hov 2 (str"[" ++ spc() ++
+      tag V_List (hov 2 (str"[" ++ spc() ++
              prlist (fun v -> pr_located pr_vernac v ++ sep_end (snd v) ++ fnl()) l
              ++ spc() ++ str"]"))
-  | VernacLoad (f,s) -> handle V_Load (str"Load" ++ if f then (spc() ++
+  | VernacLoad (f,s) -> tag V_Load (str"Load" ++ if f then (spc() ++
   str"Verbose"
   ++ spc()) else spc()  ++ qs s)
-  | VernacTime v -> handle V_Time (str"Time" ++ spc() ++ pr_vernac v)
-  | VernacTimeout(n,v) -> handle V_Timeout (str"Timeout " ++ int n ++ spc() ++
+  | VernacTime v -> tag V_Time (str"Time" ++ spc() ++ pr_vernac v)
+  | VernacTimeout(n,v) -> tag V_Timeout (str"Timeout " ++ int n ++ spc() ++
   pr_vernac v)
-  | VernacFail v -> handle V_Fail (str"Fail" ++ spc() ++ pr_vernac v)
+  | VernacFail v -> tag V_Fail (str"Fail" ++ spc() ++ pr_vernac v)
 
   (* Syntax *)
   | VernacTacticNotation (local,n,r,e) ->
-      handle V_TacticNotation (pr_locality local ++ pr_grammar_tactic_rule n
+      tag V_TacticNotation (pr_locality local ++ pr_grammar_tactic_rule n
       ("",r,e))
   | VernacOpenCloseScope (local,opening,sc) ->
-      handle V_OpenCloseScope (pr_section_locality local ++
+      tag V_OpenCloseScope (pr_section_locality local ++
       str (if opening then "Open " else "Close ") ++
       str "Scope" ++ spc() ++ str sc)
   | VernacDelimiters (sc,key) ->
-      handle V_Delimiters (str"Delimit Scope" ++ spc () ++ str sc ++
+      tag V_Delimiters (str"Delimit Scope" ++ spc () ++ str sc ++
       spc() ++ str "with " )++ str key
   | VernacBindScope (sc,cll) ->
-      handle V_BindScope (str"Bind Scope" ++ spc () ++ str sc ++
+      tag V_BindScope (str"Bind Scope" ++ spc () ++ str sc ++
       spc() ++ str "with " ++ prlist_with_sep spc pr_smart_global cll)
   | VernacArgumentsScope (local,q,scl) -> let pr_opt_scope = function
       |	None -> str"_"
       |	Some sc -> str sc in
-    handle V_ArgumentScope (pr_section_locality local ++ str"Arguments Scope" ++ spc() ++
+    tag V_ArgumentScope (pr_section_locality local ++ str"Arguments Scope" ++ spc() ++
     pr_smart_global q
     ++ spc() ++ str"[" ++ prlist_with_sep sep pr_opt_scope scl ++ str"]")
   | VernacInfix (local,((_,s),mv),q,sn) -> (* A Verifier *)
-      handle V_Infix (hov 0 (hov 0 (pr_locality local ++ str"Infix "
+      tag V_Infix (hov 0 (hov 0 (pr_locality local ++ str"Infix "
       ++ qs s ++ str " :=" ++ pr_constrarg q) ++
       pr_syntax_modifiers mv ++
       (match sn with
@@ -584,13 +587,13 @@ let rec pr_vernac = function
           let s' = String.sub s 1 (n-2) in
           if String.contains s' '\'' then qs s else str s'
 	else qs s in
-      handle V_Notation (hov 2 (pr_locality local ++ str"Notation" ++ spc() ++ ps ++
+      tag V_Notation (hov 2 (pr_locality local ++ str"Notation" ++ spc() ++ ps ++
       str " :=" ++ pr_constrarg c ++ pr_syntax_modifiers l ++
       (match opt with
         | None -> mt()
         | Some sc -> str" :" ++ spc() ++ str sc)))
   | VernacSyntaxExtension (local,(s,l)) ->
-      handle V_SyntaxExtension (pr_locality local ++ str"Reserved Notation" ++
+      tag V_SyntaxExtension (pr_locality local ++ str"Reserved Notation" ++
       spc() ++ pr_located qs s ++
       pr_syntax_modifiers l)
 
@@ -613,26 +616,26 @@ let rec pr_vernac = function
         | ProveBody (bl,t) ->
             (pr_binders_arg bl, str" :" ++ pr_spc_lconstr t, None) in
       let (binds,typ,c) = pr_def_body b in
-      handle V_Definition (hov 2 (pr_def_token d ++ spc() ++ pr_lident id ++ binds ++ typ ++
+      tag V_Definition (hov 2 (pr_def_token d ++ spc() ++ pr_lident id ++ binds ++ typ ++
       (match c with
         | None -> mt()
         | Some cc -> str" :=" ++ spc() ++ cc)))
 
   | VernacStartTheoremProof (ki,l,_,_) ->
-      handle V_StartTheoremProof (hov 1 (pr_statement (pr_thm_token ki) (List.hd l) ++
+      tag V_StartTheoremProof (hov 1 (pr_statement (pr_thm_token ki) (List.hd l) ++
              prlist (pr_statement (spc () ++ str "with")) (List.tl l)))
 
-  | VernacEndProof Admitted -> handle V_EndProof (str"Admitted")
-  | VernacEndProof (Proved (opac,o)) -> handle V_EndProof (match o with
+  | VernacEndProof Admitted -> tag V_EndProof (str"Admitted")
+  | VernacEndProof (Proved (opac,o)) -> tag V_EndProof (match o with
     | None -> if opac then str"Qed" else str"Defined"
     | Some (id,th) -> (match th with
       |	None -> (if opac then str"Save" else str"Defined") ++ spc() ++ pr_lident id
       |	Some tok -> str"Save" ++ spc() ++ pr_thm_token tok ++ spc() ++ pr_lident id))
   | VernacExactProof c ->
-      handle V_ExactProof (hov 2 (str"Proof" ++ pr_lconstrarg c))
+      tag V_ExactProof (hov 2 (str"Proof" ++ pr_lconstrarg c))
   | VernacAssumption (stre,_,l) ->
       let n = List.length (List.flatten (List.map fst (List.map snd l))) in
-      handle V_Assumption (hov 2
+      tag V_Assumption (hov 2
         (pr_assumption_token (n > 1) stre ++ spc() ++
 	 pr_ne_params_list pr_lconstr_expr l))
   | VernacInductive (f,i,l) ->
@@ -666,7 +669,7 @@ let rec pr_vernac = function
 	match k with Record -> "Record" | Structure -> "Structure"
 	  | Inductive_kw -> "Inductive" | CoInductive -> "CoInductive"
 	  | Class _ -> "Class" in
-      handle V_Inductive (hov 1 (pr_oneind key (List.hd l)) ++
+      tag V_Inductive (hov 1 (pr_oneind key (List.hd l)) ++
       (prlist (fun ind -> fnl() ++ hov 1 (pr_oneind "with" ind)) (List.tl l)))
 
 
@@ -679,7 +682,7 @@ let rec pr_vernac = function
             ++ pr_opt (fun def -> str":=" ++ brk(1,2) ++ pr_lconstr def) def ++
 	    prlist (pr_decl_notation pr_constr) ntn
       in
-      handle V_Fixpoint (hov 0 (str "Fixpoint" ++ spc() ++
+      tag V_Fixpoint (hov 0 (str "Fixpoint" ++ spc() ++
         prlist_with_sep (fun _ -> fnl() ++ str"with ") pr_onerec recs))
 
   | VernacCoFixpoint corecs ->
@@ -689,45 +692,45 @@ let rec pr_vernac = function
         pr_opt (fun def -> str" :=" ++ brk(1,2) ++ pr_lconstr def) def ++
 	prlist (pr_decl_notation pr_constr) ntn
       in
-      handle V_CoFixpoint (hov 0 (str "CoFixpoint" ++ spc() ++
+      tag V_CoFixpoint (hov 0 (str "CoFixpoint" ++ spc() ++
       prlist_with_sep (fun _ -> fnl() ++ str"with ") pr_onecorec corecs))
   | VernacScheme l ->
-      handle V_Scheme (hov 2 (str"Scheme" ++ spc() ++
+      tag V_Scheme (hov 2 (str"Scheme" ++ spc() ++
              prlist_with_sep (fun _ -> fnl() ++ str"with ") pr_onescheme l))
   | VernacCombinedScheme (id, l) ->
-      handle V_CombinedScheme (hov 2 (str"Combined Scheme" ++ spc() ++
+      tag V_CombinedScheme (hov 2 (str"Combined Scheme" ++ spc() ++
 	       pr_lident id ++ spc() ++ str"from" ++ spc() ++
 	       prlist_with_sep (fun _ -> fnl() ++ str", ") pr_lident l))
 
 
   (* Gallina extensions *)
-  | VernacBeginSection id -> handle V_BeginSection (hov 2 (str"Section" ++ spc
+  | VernacBeginSection id -> tag V_BeginSection (hov 2 (str"Section" ++ spc
   () ++ pr_lident id))
-  | VernacEndSegment id -> handle V_EndSegment (hov 2 (str"End" ++ spc() ++
+  | VernacEndSegment id -> tag V_EndSegment (hov 2 (str"End" ++ spc() ++
   pr_lident id))
-  | VernacRequire (exp, l) -> handle V_Require (hov 2
+  | VernacRequire (exp, l) -> tag V_Require (hov 2
       (str "Require" ++ spc() ++ pr_require_token exp ++
       prlist_with_sep sep pr_module l))
   | VernacImport (f,l) ->
-      handle V_Import ((if f then str"Export" else str"Import") ++ spc() ++
+      tag V_Import ((if f then str"Export" else str"Import") ++ spc() ++
       prlist_with_sep sep pr_import_module l)
-  | VernacCanonical q -> handle V_Canonical (str"Canonical Structure" ++ spc()
+  | VernacCanonical q -> tag V_Canonical (str"Canonical Structure" ++ spc()
   ++ pr_smart_global q)
   | VernacCoercion (s,id,c1,c2) ->
-      handle V_Coercion (hov 1 (
+      tag V_Coercion (hov 1 (
 	str"Coercion" ++ (match s with | Local -> spc() ++
 	  str"Local" ++ spc() | Global -> spc()) ++
 	pr_smart_global id ++ spc() ++ str":" ++ spc() ++ pr_class_rawexpr c1 ++
 	spc() ++ str">->" ++ spc() ++ pr_class_rawexpr c2))
   | VernacIdentityCoercion (s,id,c1,c2) ->
-      handle V_IdentityCoercion (hov 1 (
+      tag V_IdentityCoercion (hov 1 (
 	str"Identity Coercion" ++ (match s with | Local -> spc() ++
 	  str"Local" ++ spc() | Global -> spc()) ++ pr_lident id ++
 	spc() ++ str":" ++ spc() ++ pr_class_rawexpr c1 ++ spc() ++ str">->" ++
 	spc() ++ pr_class_rawexpr c2))
 
  | VernacInstance (abst,glob, sup, (instid, bk, cl), props, pri) ->
-     handle V_Instance (hov 1 (
+     tag V_Instance (hov 1 (
        pr_non_locality (not glob) ++
        (if abst then str"Declare " else mt ()) ++
        str"Instance" ++
@@ -741,23 +744,23 @@ let rec pr_vernac = function
 	  | None -> mt())))
 
  | VernacContext l ->
-     handle V_Context (hov 1 (
+     tag V_Context (hov 1 (
        str"Context" ++ spc () ++ pr_and_type_binders_arg l))
 
 
  | VernacDeclareInstances (glob, ids) ->
-     handle V_DeclareInstances (hov 1 (pr_non_locality (not glob) ++
+     tag V_DeclareInstances (hov 1 (pr_non_locality (not glob) ++
                str"Existing" ++ spc () ++ str(String.plural (List.length ids) "Instance") ++
                spc () ++ prlist_with_sep spc pr_reference ids))
 
  | VernacDeclareClass id ->
-     handle V_DeclareClass (hov 1 (str"Existing" ++ spc () ++ str"Class" ++ spc
+     tag V_DeclareClass (hov 1 (str"Existing" ++ spc () ++ str"Class" ++ spc
      () ++ pr_reference id))
 
   (* Modules and Module Types *)
   | VernacDefineModule (export,m,bl,tys,bd) ->
       let b = pr_module_binders_list bl pr_lconstr in
-      handle V_DefineModule (hov 2 (str"Module" ++ spc() ++ pr_require_token export ++
+      tag V_DefineModule (hov 2 (str"Module" ++ spc() ++ pr_require_token export ++
                pr_lident m ++ b ++
                pr_of_module_type pr_lconstr tys ++
 	       (if bd = [] then mt () else str ":= ") ++
@@ -765,49 +768,49 @@ let rec pr_vernac = function
 	        (pr_module_ast_inl pr_lconstr) bd))
   | VernacDeclareModule (export,id,bl,m1) ->
       let b = pr_module_binders_list bl pr_lconstr in
-	handle V_DeclareModule (hov 2 (str"Declare Module" ++ spc() ++ pr_require_token export ++
+	tag V_DeclareModule (hov 2 (str"Declare Module" ++ spc() ++ pr_require_token export ++
              pr_lident id ++ b ++
              pr_module_ast_inl pr_lconstr m1))
   | VernacDeclareModuleType (id,bl,tyl,m) ->
       let b = pr_module_binders_list bl pr_lconstr in
       let pr_mt = pr_module_ast_inl pr_lconstr in
-	handle V_DeclareModuleType (hov 2 (str"Module Type " ++ pr_lident id ++ b ++
+	tag V_DeclareModuleType (hov 2 (str"Module Type " ++ pr_lident id ++ b ++
 		 prlist_strict (fun m -> str " <: " ++ pr_mt m) tyl ++
 		 (if m = [] then mt () else str ":= ") ++
 		 prlist_with_sep (fun () -> str " <+ ") pr_mt m))
   | VernacInclude (mexprs) ->
       let pr_m = pr_module_ast_inl pr_lconstr in
-      handle V_Include (hov 2 (str"Include " ++
+      tag V_Include (hov 2 (str"Include " ++
 	     prlist_with_sep (fun () -> str " <+ ") pr_m mexprs))
   (* Solving *)
   | VernacSolve (i,tac,deftac) ->
-      handle V_Solve ((if i = 1 then mt() else int i ++ str ": ") ++
+      tag V_Solve ((if i = 1 then mt() else int i ++ str ": ") ++
       pr_raw_tactic tac
       ++ (try if deftac then str ".." else mt ()
       with UserError _|Loc.Exc_located _ -> mt()))
 
   | VernacSolveExistential (i,c) ->
-      handle V_SolveExistential (str"Existential " ++ int i ++ pr_lconstrarg c)
+      tag V_SolveExistential (str"Existential " ++ int i ++ pr_lconstrarg c)
 
   (* Auxiliary file and library management *)
-  | VernacRequireFrom (exp, f) -> handle V_RequireFrom (hov 2
+  | VernacRequireFrom (exp, f) -> tag V_RequireFrom (hov 2
       (str "Require" ++ spc() ++ pr_require_token exp ++ qs f))
-  | VernacAddLoadPath (fl,s,d) -> handle V_AddLoadPath (hov 2
+  | VernacAddLoadPath (fl,s,d) -> tag V_AddLoadPath (hov 2
       (str"Add" ++
        (if fl then str" Rec " else spc()) ++
        str"LoadPath" ++ spc() ++ qs s ++
        (match d with
          | None -> mt()
          | Some dir -> spc() ++ str"as" ++ spc() ++ pr_dirpath dir)))
-  | VernacRemoveLoadPath s -> handle V_RemoveLoadPath (str"Remove LoadPath" ++
+  | VernacRemoveLoadPath s -> tag V_RemoveLoadPath (str"Remove LoadPath" ++
   qs s)
   | VernacAddMLPath (fl,s) ->
-      handle V_AddMLPath (str"Add" ++ (if fl then str" Rec " else spc()) ++
+      tag V_AddMLPath (str"Add" ++ (if fl then str" Rec " else spc()) ++
       str"ML Path" ++ qs s)
   | VernacDeclareMLModule (local, l) ->
-      handle V_DeclareMLModule (pr_locality local ++
+      tag V_DeclareMLModule (pr_locality local ++
       hov 2 (str"Declare ML Module" ++ spc() ++ prlist_with_sep sep qs l))
-  | VernacChdir s -> handle V_Chdir (str"Cd" ++ pr_opt qs s)
+  | VernacChdir s -> tag V_Chdir (str"Cd" ++ pr_opt qs s)
 
   (* Commands *)
   | VernacDeclareTacticDefinition (local,rc,l) ->
@@ -826,36 +829,36 @@ let rec pr_vernac = function
 	    (List.map (fun (x, _, _) -> x) (List.filter (fun (_, redef, _) -> not redef) l)))
 	  (Global.env())
 	  body in
-      handle V_DeclareTacticDefinition (hov 1
+      tag V_DeclareTacticDefinition (hov 1
         (pr_locality local ++ str "Ltac " ++
         prlist_with_sep (fun () -> fnl() ++ str"with ") pr_tac_body l))
   | VernacCreateHintDb (local,dbname,b) ->
-      handle V_CreateHintDb (hov 1 (pr_locality local ++ str "Create HintDb "
+      tag V_CreateHintDb (hov 1 (pr_locality local ++ str "Create HintDb "
       ++
 		str dbname ++ (if b then str" discriminated" else mt ())))
-  | VernacRemoveHints (local, dbnames, ids) -> handle V_RemoveHints (hov 1
+  | VernacRemoveHints (local, dbnames, ids) -> tag V_RemoveHints (hov 1
   (pr_locality local ++ str "Remove Hints " ++
 	       prlist_with_sep spc (fun r -> pr_id (coerce_reference_to_id r)) ids ++
 	       pr_opt_hintbases dbnames))
   | VernacHints (local,dbnames,h) ->
-      handle V_Hints (pr_hints local dbnames h pr_constr pr_constr_pattern_expr)
+      tag V_Hints (pr_hints local dbnames h pr_constr pr_constr_pattern_expr)
   | VernacSyntacticDefinition (id,(ids,c),local,onlyparsing) ->
-      handle V_SyntacticDefinition (hov 2
+      tag V_SyntacticDefinition (hov 2
         (pr_locality local ++ str"Notation " ++ pr_lident id ++ spc () ++
 	 prlist (fun x -> spc() ++ pr_id x) ids ++ str":=" ++ pr_constrarg c ++
          pr_syntax_modifiers
 	   (match onlyparsing with None -> [] | Some v -> [SetOnlyParsing v])))
   | VernacDeclareImplicits (local,q,[]) ->
-      handle V_DeclareImplicits (hov 2 (pr_section_locality local ++ str"Implicit Arguments" ++ spc() ++
+      tag V_DeclareImplicits (hov 2 (pr_section_locality local ++ str"Implicit Arguments" ++ spc() ++
 	pr_smart_global q))
   | VernacDeclareImplicits (local,q,impls) ->
-      handle V_DeclareImplicits (hov 1 (pr_section_locality local ++ str"Implicit Arguments " ++
+      tag V_DeclareImplicits (hov 1 (pr_section_locality local ++ str"Implicit Arguments " ++
 	spc() ++ pr_smart_global q ++ spc() ++
 	prlist_with_sep spc (fun imps ->
 	  str"[" ++ prlist_with_sep sep pr_explanation imps ++ str"]")
 	  impls))
   | VernacArguments (local, q, impl, nargs, mods) ->
-      handle V_Arguments (hov 2 (pr_section_locality local ++ str"Arguments" ++ spc() ++
+      tag V_Arguments (hov 2 (pr_section_locality local ++ str"Arguments" ++ spc() ++
         pr_smart_global q ++
       let pr_s = function None -> str"" | Some (_,s) -> str "%" ++ str s in
       let pr_if b x = if b then x else str "" in
@@ -883,11 +886,11 @@ let rec pr_vernac = function
         mods))
   | VernacReserve bl ->
       let n = List.length (List.flatten (List.map fst bl)) in
-      handle V_Reserve (hov 2 (str"Implicit Type" ++
+      tag V_Reserve (hov 2 (str"Implicit Type" ++
         str (if n > 1 then "s " else " ") ++
         pr_ne_params_list pr_lconstr_expr (List.map (fun sb -> false,sb) bl)))
   | VernacGeneralizable (local, g) ->
-      handle V_Generalizable (hov 1 (pr_locality local ++ str"Generalizable Variable" ++
+      tag V_Generalizable (hov 1 (pr_locality local ++ str"Generalizable Variable" ++
 		match g with
 		| None -> str "s none"
 		| Some [] -> str "s all"
@@ -895,10 +898,10 @@ let rec pr_vernac = function
 		    str (if List.length idl > 1 then "s " else " ") ++
 		      prlist_with_sep spc pr_lident idl))
   | VernacSetOpacity(b,[k,l]) when k=Conv_oracle.transparent ->
-      handle V_SetOpacity (hov 1 (pr_non_locality b ++ str "Transparent" ++
+      tag V_SetOpacity (hov 1 (pr_non_locality b ++ str "Transparent" ++
              spc() ++ prlist_with_sep sep pr_smart_global l))
   | VernacSetOpacity(b,[Conv_oracle.Opaque,l]) ->
-      handle V_SetOpacity (hov 1 (pr_non_locality b ++ str "Opaque" ++
+      tag V_SetOpacity (hov 1 (pr_non_locality b ++ str "Opaque" ++
              spc() ++ prlist_with_sep sep pr_smart_global l))
   | VernacSetOpacity (local,l) ->
       let pr_lev = function
@@ -909,21 +912,21 @@ let rec pr_vernac = function
       let pr_line (l,q) =
         hov 2 (pr_lev l ++ spc() ++
                str"[" ++ prlist_with_sep sep pr_smart_global q ++ str"]") in
-      handle V_SetOpacity (hov 1 (pr_locality local ++ str "Strategy" ++ spc() ++
+      tag V_SetOpacity (hov 1 (pr_locality local ++ str "Strategy" ++ spc() ++
              hv 0 (prlist_with_sep sep pr_line l)))
   | VernacUnsetOption (l,na) ->
-      handle V_UnsetOption (hov 1 (pr_locality_full l ++ str"Unset" ++ spc() ++
+      tag V_UnsetOption (hov 1 (pr_locality_full l ++ str"Unset" ++ spc() ++
       pr_printoption na None))
   | VernacSetOption (l,na,v) ->
-      handle V_SetOption (hov 2 (pr_locality_full l ++ str"Set" ++ spc() ++
+      tag V_SetOption (hov 2 (pr_locality_full l ++ str"Set" ++ spc() ++
       pr_set_option na v))
-  | VernacAddOption (na,l) -> handle V_AddOption (hov 2 (str"Add" ++ spc() ++
+  | VernacAddOption (na,l) -> tag V_AddOption (hov 2 (str"Add" ++ spc() ++
   pr_printoption na (Some l)))
-  | VernacRemoveOption (na,l) -> handle V_RemoveOption (hov 2 (str"Remove" ++
+  | VernacRemoveOption (na,l) -> tag V_RemoveOption (hov 2 (str"Remove" ++
   spc() ++ pr_printoption na (Some l)))
-  | VernacMemOption (na,l) -> handle V_MemOption (hov 2 (str"Test" ++ spc() ++
+  | VernacMemOption (na,l) -> tag V_MemOption (hov 2 (str"Test" ++ spc() ++
   pr_printoption na (Some l)))
-  | VernacPrintOption na -> handle V_PrintOption (hov 2 (str"Test" ++ spc() ++
+  | VernacPrintOption na -> tag V_PrintOption (hov 2 (str"Test" ++ spc() ++
   pr_printoption na None))
   | VernacCheckMayEval (r,io,c) ->
       let pr_mayeval r c = match r with
@@ -933,16 +936,16 @@ let rec pr_vernac = function
           spc() ++ str"in" ++ spc () ++ pr_lconstr c)
       | None -> hov 2 (str"Check" ++ spc() ++ pr_lconstr c)
       in
-      handle V_CheckMayEval ((if io = None then mt() else int (Option.get io) ++ str ": ") ++
+      tag V_CheckMayEval ((if io = None then mt() else int (Option.get io) ++ str ": ") ++
       pr_mayeval r c)
-  | VernacGlobalCheck c -> handle V_GlobalCheck (hov 2 (str"Type" ++
+  | VernacGlobalCheck c -> tag V_GlobalCheck (hov 2 (str"Type" ++
   pr_constrarg c))
   | VernacDeclareReduction (b,s,r) ->
-     handle V_DeclareReduction (pr_locality b ++ str "Declare Reduction " ++ str
+     tag V_DeclareReduction (pr_locality b ++ str "Declare Reduction " ++ str
      s ++ str " := " ++
      pr_red_expr (pr_constr,pr_lconstr,pr_smart_global, pr_constr) r)
-  | VernacPrint p -> handle V_Print (pr_printable p)
-  | VernacSearch (sea,sea_r) -> handle V_Search (pr_search sea sea_r
+  | VernacPrint p -> tag V_Print (pr_printable p)
+  | VernacSearch (sea,sea_r) -> tag V_Search (pr_search sea sea_r
   pr_constr_pattern_expr)
   | VernacLocate loc ->
       let pr_locate = function
@@ -951,35 +954,35 @@ let rec pr_vernac = function
 	| LocateLibrary qid -> str"Library" ++ spc () ++ pr_module qid
 	| LocateModule qid -> str"Module" ++ spc () ++ pr_module qid
 	| LocateTactic qid -> str"Ltac" ++ spc () ++ pr_ltac_ref qid
-      in handle V_Locate (str"Locate" ++ spc() ++ pr_locate loc)
+      in tag V_Locate (str"Locate" ++ spc() ++ pr_locate loc)
   | VernacComments l ->
-      handle V_Comments (hov 2
+      tag V_Comments (hov 2
         (str"Comments" ++ spc() ++ prlist_with_sep sep (pr_comment pr_constr)
         l))
   | VernacNop -> mt()
 
   (* Toplevel control *)
-  | VernacToplevelControl exn -> handle V_ToplevelControl (pr_topcmd exn)
+  | VernacToplevelControl exn -> tag V_ToplevelControl (pr_topcmd exn)
 
   (* For extension *)
-  | VernacExtend (s,c) -> handle V_Extend (pr_extend s c)
-  | VernacProof (None, None) -> handle V_Proof (str "Proof")
-  | VernacProof (None, Some l) -> handle V_Proof (str "Proof using" ++spc()++
+  | VernacExtend (s,c) -> tag V_Extend (pr_extend s c)
+  | VernacProof (None, None) -> tag V_Proof (str "Proof")
+  | VernacProof (None, Some l) -> tag V_Proof (str "Proof using" ++spc()++
   prlist pr_lident l)
-  | VernacProof (Some te, None) -> handle V_Proof (str "Proof with" ++ spc() ++
+  | VernacProof (Some te, None) -> tag V_Proof (str "Proof with" ++ spc() ++
   pr_raw_tactic te)
   | VernacProof (Some te, Some l) ->
-      handle V_Proof (str "Proof using" ++spc()++ prlist pr_lident l ++ spc() ++
+      tag V_Proof (str "Proof using" ++spc()++ prlist pr_lident l ++ spc() ++
       str "with" ++ spc() ++pr_raw_tactic te)
-  | VernacProofMode s -> handle V_ProofMode (str ("Proof Mode "^s))
-  | VernacBullet b -> handle V_Bullet (begin match b with
+  | VernacProofMode s -> tag V_ProofMode (str ("Proof Mode "^s))
+  | VernacBullet b -> tag V_Bullet (begin match b with
       | Dash -> str"-"
       | Star -> str"*"
       | Plus -> str"+"
   end ++ spc())
-  | VernacSubproof None -> handle V_Subproof (str "{")
-  | VernacSubproof (Some i) -> handle V_Subproof (str "BeginSubproof " ++ int i)
-  | VernacEndSubproof -> handle V_EndSubproof (str "}")
+  | VernacSubproof None -> tag V_Subproof (str "{")
+  | VernacSubproof (Some i) -> tag V_Subproof (str "BeginSubproof " ++ int i)
+  | VernacEndSubproof -> tag V_EndSubproof (str "}")
 
 and pr_extend s cl =
   let pr_arg a =

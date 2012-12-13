@@ -19,12 +19,12 @@ type xml = Serialize.xml =
 (* Annotation type: This is the data representation of prettyprint's output
  * The logical structure is very similar to the xml type above.
  * Either an annotation is a empty element (a tree), or it is
- * a tag made of a given type (the context_handler type), containing multiple
+ * a tag made of a given type (the context_tag type), containing multiple
  * annotations
  *)
 type annot =
   | AString of string
-  | ATag of Pp.context_handler * annot list
+  | ATag of Xml_pp.context_tag * annot list
 
 (* coqtop_handle -> string -> annot list
  * This function translates a string of vernac code into an annot type
@@ -33,6 +33,7 @@ type annot =
  *)
 let annot_of_vernac ct vernac_string =
   let pp_output = Coqtop.handle_value (Coqtop.prettyprint ct vernac_string) in
+  print_endline pp_output;
 
   (** We encapsulate the response string into a tag in order to parse
    * the full xml hierarchy *)
@@ -43,7 +44,7 @@ let annot_of_vernac ct vernac_string =
   let rec translate = function
     PCData s -> AString s
     | Element (name, [], xml) -> (* We do not accept attributes *)
-        ATag (Pp.context_of_string name, List.map translate xml)
+        ATag (Xml_pp.context_tag_of_string name, List.map translate xml)
     | Element (name,_,_) ->
         raise (Xml_error ("Invalid formated tag: " ^ name ^ "\n")) in
 
@@ -60,12 +61,12 @@ let annot_of_vernac ct vernac_string =
  * In order to allow user-defined interactions, we use a chain-of-control
  * design pattern.
  * We use a hashtable to store translation rules: the key is the tag
- * (Pp.context_handler) on which the rule applies, while the content is the
+ * (Xml_pp.context_tag) on which the rule applies, while the content is the
  * function which does the translation from annot to Cst.doc *)
 let code_rules = Hashtbl.create 42
 
 (** Function to add rules to the hashtable.
- * Tag is a Pp.context_handler, and
+ * Tag is a Xml_pp.context_tag, and
  * f is a function of type (annot list -> doc ) -> annot list -> doc.
  * The first argument is a "fallback" function which should be called when
  * the rule does not apply. This fallback functions calls the rest of the
@@ -103,7 +104,7 @@ let maybe_symbol f str =
  * output files, and in order to allow location of identifiers *)
 let _ =
   begin
-    let open Pp in
+    let open Xml_pp in
     (** This is a generic rule for keyword printing. We consider all the
      * string elements of an expression as being keywords or symbols.
      *)

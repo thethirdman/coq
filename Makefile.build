@@ -543,7 +543,7 @@ $(FAKEIDE): lib/xml_lexer$(BESTOBJ) lib/xml_parser$(BESTOBJ) lib/xml_utils$(BEST
 # Coqdoc-ng specific rules
 
 NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo \
-			 lib/pp_control.cmo lib/pp.cmo lib/xml_utils.cmo        \
+			 lib/pp_control.cmo lib/xml_pp.cmo lib/pp.cmo lib/xml_utils.cmo        \
 	$(addprefix tools/coqdoc-ng/src/, \
 	coqtop_handle.cmo settings.cmo cst.cmo hyperlinks.cmo annotations.cmo \
 	ast.cmo html.cmo	doc_lexer.cmo vernac_lexer.cmo parser.cmo vdoc.cmo coqdoc.cmo)

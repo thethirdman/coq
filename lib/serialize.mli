@@ -78,8 +78,7 @@ val set_options : (option_name * option_value) list -> unit call
  *)
 val locate : string -> string option call
 
-(** Pretty prints code using a "marked-up" style. More info in Ppconstr
- * and Pp *)
+(** Pretty prints code using a "marked-up" style defined in {!Xmlpp}. *)
 val prettyprint : string -> string call
 
 (** Quit gracefully the interpreter. *)

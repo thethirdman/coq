@@ -2,6 +2,7 @@ Coq_config
 Int
 Pp_control
 Flags
+Xml_pp
 Pp
 Loc
 Segmenttree
