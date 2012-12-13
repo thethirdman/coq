@@ -1,24 +1,42 @@
-%token EOF STARTCOM ENDCOM STARTDOC STARTVERNAC ENDVERNAC
-%token STARTPP ENDPP STARTVERBATIM ENDVERBATIM HRULE
-%token EMPHASIS LATEX LATEX_MATH HTML ENDLST ITEM
+(** This file contain the parsers for coqdoc:
+  * It is to be compiled with menhir *)
+
+%token EOF STARTCOM ENDCOM STARTDOC STARTVERNAC ENDVERNAC STARTPP ENDPP
+       STARTVERBATIM ENDVERBATIM HRULE EMPHASIS LATEX LATEX_MATH HTML ENDLST
+       ITEM
 %token <int> LST
 %token <int*string> SECTION
 %token <string> CONTENT ADD_TOKEN RM_TOKEN
 %token <string*string> QUERY
 
-%start main parse_doc (* FIXME: good return type *)
-%type <string Cst.cst_node> main
+%start parse_vernac parse_doc
+
+%type <string Cst.cst_node> parse_vernac
 %type <Cst.doc> parse_doc
 
 %{
   open Str
   let merge_contents lst = List.fold_right (fun a b -> a^b) lst ""
+
+  (** Merges a list of Cst.raw_content elements. The last non-empty fields
+   * encountered are kept *)
+  let merge_raw_content lst =
+    let open Cst in List.fold_left (fun acc item ->
+    { latex =
+          if item.latex <> "" then item.latex else acc.latex;
+      latex_math =
+        if item.latex_math <> "" then item.latex_math else acc.latex_math;
+      html =
+        if item.html <> "" then item.html else acc.html;})
+    {latex = ""; latex_math = ""; html = ""} lst
 %}
 
 %%
 
 
-main:
+(** This function does the separation from code, comment and documentation,
+ * after the input has been lexed by vernac_lexer *)
+parse_vernac:
 STARTCOM list(CONTENT) ENDCOM
   {Cst.Comment (merge_contents $2)}
 | STARTDOC list(CONTENT) ENDCOM
@@ -28,10 +46,14 @@ STARTCOM list(CONTENT) ENDCOM
 | EOF
   {raise Cst.End_of_file}
 
+(** This function parses the different elements of the documentation strings
+   * from the source file *)
 parse_doc:
   lst = list(parse_seq) EOF
     {`Seq lst}
 
+(**  This is used to allow the parsing of elements that allow "documented"
+ * elements inside them (for example: an emphasis containing a query) *)
 parse_seq:
   term = parse_term
     {term}
@@ -39,13 +61,14 @@ parse_seq:
     {`Emphasis (`Seq lst)}
   | LST lst=list(parse_lst) ENDLST
     {`List lst}
-
+(** Function for parsing documentation lists *)
 parse_lst:
 | LST lst=list(parse_lst) ENDLST
   {`List lst}
 | ITEM c=list(parse_term)
   {(`Item  (0,`Seq c)) }
 
+(* Basic elements of documentation strings *)
 parse_term:
 STARTVERNAC CONTENT ENDVERNAC
   {`Vernac $2}
@@ -64,14 +87,7 @@ STARTVERNAC CONTENT ENDVERNAC
   arglist))}
 | tok=ADD_TOKEN translations=list(raw_terms) EOF
 {
-  let open Cst in
-  let merged_term =
-    List.fold_left (fun acc item ->
-      {latex = if item.latex <> "" then item.latex else acc.latex;
-      latex_math = if item.latex_math <> "" then item.latex_math else acc.latex_math;
-      html = if item.html <> "" then item.html else acc.html;})
-    {latex = ""; latex_math = ""; html = ""} translations in
-  `Add_token (tok, merged_term)}
+  `Add_token (tok, merge_raw_content translations)}
 | tok=RM_TOKEN
 { `Rm_token tok }
 | raw_terms

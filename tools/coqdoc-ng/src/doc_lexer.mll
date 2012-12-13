@@ -4,36 +4,34 @@
   open Lexing
   open Parser
 
-  exception Error of string
-
-  let buff = Buffer.create 42
   let tokens = Queue.create ()
 
+  (** This buffer stores the current string being parsed *)
+  let buff = Buffer.create 42
+
+  (** Empties the buffer buff and stores the string into a CONTENT tokens
+   * inside the queue *)
+  let get_flush () =
+    let str = Buffer.contents buff in
+    Buffer.clear buff;
+    if str <> "" then
+      Queue.push (CONTENT str) tokens
+
+
+  (** Set of functions in order to manage the lists *)
   let lst_lvl = ref []
   let push elt = lst_lvl := elt::!lst_lvl
   let pop () = match !lst_lvl with [] -> () | e::l -> lst_lvl := l
   let get_lvl () = match !lst_lvl with [] -> -1 | e::l -> e
 
-  (*let pop_lvl () = match !lst_lvl with
-    [] -> raise (Invalid_argument "pop_lvl")
-    | [e] -> e
-    | e::l -> lst_lvl := l; e
-  let push_lvl e = lst_lvl := e::!lst_lvl*)
-
-  let backtrack lexbuf = lexbuf.lex_curr_pos <- lexbuf.lex_start_pos;
-    lexbuf.lex_curr_p <- lexbuf.lex_start_p
-
+  (** Handles the eof: while the queue is not empty, no EOF tokens
+   * will be returned *)
   let treat_eof () =
     if Queue.is_empty tokens then
       if !lst_lvl <> [] then (pop (); ENDLST) else EOF
     else
       Queue.pop tokens
 
-  let get_flush () =
-    let str = Buffer.contents buff in
-    Buffer.clear buff;
-    if str <> "" then
-        Queue.push (CONTENT str) tokens
 
   let tok_lst =
     [("[",STARTVERNAC);
@@ -47,52 +45,58 @@
     ("%",LATEX);
     ("$",LATEX_MATH);
     ("#",HTML);]
-let tok_htbl = Hashtbl.create 11
+  let tok_htbl = Hashtbl.create 11
 
-let counter = ref 0
-
-let _ = List.iter (fun (key,tok) -> Hashtbl.add tok_htbl key tok) tok_lst
+  let _ = List.iter (fun (key,tok) -> Hashtbl.add tok_htbl key tok) tok_lst
 
 }
 
 let sp = [' '  '\t']
 let nl = "\r\n" | '\n'
-let tok_reg = "[" | "]" | "[[" | "]]" | "<<" | ">>" | "----" | "_" | "%"
-            | "$" | "#"
 
-let nl_end = nl | "*)"
+let tok_reg = "[" | "]" | "[[" | "]]" | "<<" | ">>" | "----" | "_" | "%"
+          | "$" | "#"
+
 let sp_nl = sp | nl (* Space or newline *)
 let name = ['a'-'z''A'-'Z''0'-'9']+
 
 rule lex_doc = parse
-  sp_nl* (tok_reg as tok) sp_nl* {get_flush ();
-                Queue.push (Hashtbl.find tok_htbl tok) tokens;
-               Queue.pop tokens}
-| '@' (name as query) '{' (_* as arglist) '}'
-  {get_flush (); Queue.push (QUERY (query,arglist)) tokens; Queue.pop tokens}
-| ("*"+ as lvl) ' ' ([^'\n']* as title)
-  {get_flush ();
-    Queue.push (SECTION ((String.length lvl), title)) tokens; Queue.pop tokens}
-| nl (sp* as lvl) "- " {get_flush ();
-  let depth = String.length lvl in
-  if depth > (get_lvl ()) then (* New sublist *)
-    (Queue.push (LST depth) tokens; Queue.push ITEM tokens;
-    push depth;
-    Queue.pop tokens)
-  else if depth < (get_lvl ()) then (* End of sublist *)
-    (Queue.push ENDLST tokens;
-    Queue.push ITEM tokens;
-    (*Queue.push (lex_doc lexbuf) tokens ;*)
-    pop ();
-    Queue.pop tokens)
-  else (* Another item *)
-    (Queue.push ITEM tokens; Queue.pop tokens)}
-| "remove" sp+ "printing" ([^' ''\t']+ as tok) sp+
-  {get_flush (); Queue.push (RM_TOKEN tok) tokens; Queue.pop tokens}
-| "printing" sp+ ([^' ''\t']+ as tok) sp+
-  {get_flush (); Queue.push (ADD_TOKEN tok) tokens; Queue.pop tokens}
-| nl as n { Buffer.add_string buff n; lex_doc lexbuf }
+  (** Token matching *)
+  | sp_nl* (tok_reg as tok) sp_nl*
+    {get_flush (); Queue.push (Hashtbl.find tok_htbl tok) tokens;
+      Queue.pop tokens}
 
-| eof { (if (Buffer.length buff <> 0) then get_flush ()); treat_eof ()}
-| "(*" | "(**" | "*)" as elt {Buffer.add_string buff elt; lex_doc lexbuf}
-| _ as c {Buffer.add_char buff c; lex_doc lexbuf}
+    (** Query matching, the arguments are split in the parser *)
+  | '@' (name as query) '{' (_* as arglist) '}'
+    {get_flush (); Queue.push (QUERY (query,arglist)) tokens;
+    Queue.pop tokens}
+
+    (** Section matching: the importance of the title is the number of stars *)
+  | ("*"+ as lvl) ' ' ([^'\n']+ as title)
+    {get_flush (); Queue.push (SECTION ((String.length lvl), title)) tokens;
+    Queue.pop tokens}
+
+    (** List matching: if a line starts with a '-', then it is an element of a
+     * list *)
+  | nl (sp* as lvl) "- " {get_flush ();
+    let depth = String.length lvl in
+    if depth > (get_lvl ()) then (* New sublist *)
+      (Queue.push (LST depth) tokens; Queue.push ITEM tokens;
+      push depth;
+      Queue.pop tokens)
+      else if depth < (get_lvl ()) then (* End of sublist *)
+        (Queue.push ENDLST tokens;
+      Queue.push ITEM tokens;
+      pop ();
+      Queue.pop tokens)
+    else (* Another item *)
+      (Queue.push ITEM tokens; Queue.pop tokens)}
+
+  | "remove" sp+ "printing" ([^' ''\t']+ as tok) sp+
+    {get_flush (); Queue.push (RM_TOKEN tok) tokens; Queue.pop tokens}
+
+  | "printing" sp+ ([^' ''\t']+ as tok) sp+
+    {get_flush (); Queue.push (ADD_TOKEN tok) tokens; Queue.pop tokens}
+
+  | eof { (if (Buffer.length buff <> 0) then get_flush ()); treat_eof ()}
+  | _ as c {Buffer.add_char buff c; lex_doc lexbuf}

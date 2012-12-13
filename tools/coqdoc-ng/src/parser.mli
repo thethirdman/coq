@@ -26,5 +26,5 @@ type token =
   | ADD_TOKEN of (string)
 
 
+val parse_vernac: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (string Cst.cst_node)
 val parse_doc: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (Cst.doc)
-val main: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (string Cst.cst_node)
