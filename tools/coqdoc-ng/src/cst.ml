@@ -12,12 +12,18 @@ type code =  Keyword of string | Ident of string | Literal of string
             | Tactic of string
             | Symbol of string | NoFormat of string
 
+type printing_rule = {
+  is_command : bool;
+  match_element : string;
+  replace_with : raw_content}
+
+
 (* Doc data-type, first level of documentation representation *)
 type doc = [
     `Vernac of string
   | `Pretty_print of string
-  | `Add_token of string*raw_content
-  | `Rm_token of string
+  | `Add_printing of printing_rule
+  | `Rm_printing of string
   | `Section of (int*string)
   | `Item of (int*doc) (* List in coqdoc *)
   | `Hrule

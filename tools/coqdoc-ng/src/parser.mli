@@ -7,7 +7,7 @@ type token =
   | STARTDOC
   | STARTCOM
   | SECTION of (int*string)
-  | RM_TOKEN of (string)
+  | RM_PRINTING of (string)
   | QUERY of (string*string)
   | LST of (int)
   | LATEX_MATH
@@ -23,7 +23,7 @@ type token =
   | ENDCOM
   | EMPHASIS
   | CONTENT of (string)
-  | ADD_TOKEN of (string)
+  | ADD_PRINTING of (bool*string)
 
 
 val parse_vernac: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (string Cst.cst_node)

@@ -6,7 +6,8 @@
        ITEM
 %token <int> LST
 %token <int*string> SECTION
-%token <string> CONTENT ADD_TOKEN RM_TOKEN
+%token <string> CONTENT RM_PRINTING
+%token <bool*string> ADD_PRINTING
 %token <string*string> QUERY
 
 %start parse_vernac parse_doc
@@ -85,11 +86,13 @@ STARTVERNAC CONTENT ENDVERNAC
 | query = QUERY
   {let (name,arglist) = query in `Query (name,(Str.split (Str.regexp ",")
   arglist))}
-| tok=ADD_TOKEN translations=list(raw_terms) EOF
-{
-  `Add_token (tok, merge_raw_content translations)}
-| tok=RM_TOKEN
-{ `Rm_token tok }
+| ADD_PRINTING translations=list(raw_terms) EOF
+{ let open Cst in
+  `Add_printing {is_command = (fst $1); match_element = (snd $1);
+  replace_with = (merge_raw_content translations)}
+}
+| tok=RM_PRINTING
+{ `Rm_printing tok }
 | raw_terms
   {`Raw $1}
 
