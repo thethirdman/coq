@@ -70,22 +70,22 @@ let print_hunks n pr pr_binders (terms,termlists,binders) unp =
   let rec aux = function
   | [] -> mt ()
   | UnpMetaVar (_,prec) :: l ->
-      let c = pop env in tag C_UnpMetaVar (pr (n,prec) c ++ aux l)
+      let c = pop env in (tag C_UnpMetaVar (pr (n,prec) c)) ++ aux l
   | UnpListMetaVar (_,prec,sl) :: l ->
       let cl = pop envlist in
       let pp1 = prlist_with_sep (fun () -> aux sl) (pr (n,prec)) cl in
       let pp2 = aux l in
-      tag C_UnpListMetaVar (pp1 ++ pp2)
+      (tag C_UnpListMetaVar pp1) ++ pp2
   | UnpBinderListMetaVar (_,isopen,sl) :: l ->
-      let cl = pop bll in tag C_UnpBinderListMetaVar (pr_binders (fun () ->
-        aux sl) isopen cl ++ aux l)
-  | UnpTerminal s :: l -> tag C_UnpTerminal (str s ++ aux l)
+      let cl = pop bll in (tag C_UnpBinderListMetaVar (pr_binders (fun () ->
+        aux sl) isopen cl)) ++ aux l
+  | UnpTerminal s :: l -> (tag C_UnpTerminal (str s)) ++ aux l
   | UnpBox (b,sub) :: l ->
       (* Keep order: side-effects *)
       let pp1 = ppcmd_of_box b (aux sub) in
       let pp2 = aux l in
-      tag C_UnpBox (pp1 ++ pp2)
-  | UnpCut cut :: l -> tag C_UnpCut (ppcmd_of_cut cut ++ aux l) in
+      pp1 ++ pp2
+  | UnpCut cut :: l -> ppcmd_of_cut cut ++ aux l in
   aux unp
 
 let pr_notation pr pr_binders s env =

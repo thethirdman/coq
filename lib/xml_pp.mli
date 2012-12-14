@@ -24,8 +24,8 @@ val is_semistructured_pp : unit -> bool
     commands. They correspond to the name of data constructors of
     the type [constr_expr] and [vernac_expr]. *)
 type context_tag = C_CNotation | C_Id | C_Ref | C_UnpMetaVar
-    | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal | C_UnpBox
-    | C_UnpCut | C_Name | C_GlobSort | C_CHole
+    | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal
+    | C_Name | C_GlobSort | C_CHole
     | C_Explicitation | C_Qualid | C_Patt | C_Binder | C_RecDecl
     | C_CFix | C_CCoFix | C_CProdN | C_CLambdaN | C_CLetIn | C_CAppExpl
     | C_CApp | C_CRecord | C_CCases | C_CLetTuple | C_CIf | C_CEvar | C_CPatVar
