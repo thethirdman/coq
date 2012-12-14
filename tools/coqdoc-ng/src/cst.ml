@@ -4,8 +4,10 @@
 
 exception End_of_file
 
-(* Type representing inline tex/html in source files *)
-type raw_content = { latex : string; latex_math : string; html : string}
+(* Type representing inline tex/html in source files; Also contains a
+ * default rule in case the output type is not handled *)
+type raw_content = { latex : string; latex_math : string; html : string;
+                      default : string}
 
 (* Type for code elements *)
 type code =  Keyword of string | Ident of string | Literal of string

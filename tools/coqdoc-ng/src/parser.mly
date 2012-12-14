@@ -28,8 +28,10 @@
       latex_math =
         if item.latex_math <> "" then item.latex_math else acc.latex_math;
       html =
-        if item.html <> "" then item.html else acc.html;})
-    {latex = ""; latex_math = ""; html = ""} lst
+        if item.html <> "" then item.html else acc.html;
+      default =
+        if item.default <> "" then item.default else acc.default})
+    {latex = ""; latex_math = ""; html = ""; default= ""} lst
 %}
 
 %%
@@ -88,8 +90,11 @@ STARTVERNAC CONTENT ENDVERNAC
   arglist))}
 | ADD_PRINTING translations=list(raw_terms) EOF
 { let open Cst in
+  let final_translation = (merge_raw_content translations) in
   `Add_printing {is_command = (fst $1); match_element = (snd $1);
-  replace_with = (merge_raw_content translations)}
+  replace_with = {latex = final_translation.latex; html =
+    final_translation.html; latex_math = final_translation.latex_math;
+    default = (snd $1)}}
 }
 | tok=RM_PRINTING
 { `Rm_printing tok }
@@ -98,8 +103,8 @@ STARTVERNAC CONTENT ENDVERNAC
 
 raw_terms:
 | LATEX CONTENT LATEX
-  {{Cst.latex = $2; Cst.latex_math=""; Cst.html="";}}
+  {{Cst.latex = $2; Cst.latex_math=""; Cst.html=""; Cst.default = ""}}
 | LATEX_MATH CONTENT LATEX_MATH
-  {{Cst.latex = ""; Cst.latex_math=$2; Cst.html="";}}
+  {{Cst.latex = ""; Cst.latex_math=$2; Cst.html=""; Cst.default = ""}}
 | HTML CONTENT HTML
-  {{Cst.latex = ""; Cst.latex_math=""; Cst.html=$2;}}
+  {{Cst.latex = ""; Cst.latex_math=""; Cst.html=$2; Cst.default = ""}}
