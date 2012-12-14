@@ -92,12 +92,11 @@ rule lex_doc = parse
     else (* Another item *)
       (Queue.push ITEM tokens; Queue.pop tokens)}
 
-  | "remove" sp+ "printing" sp+ ([^' ''\t']+ as tok) sp+
+  | "remove" sp+ "printing" sp+ ([^' ''\t']+ as tok)
     {get_flush (); Queue.push (RM_PRINTING tok) tokens; Queue.pop tokens}
 
-  | "printing"("_macro"* as macro) sp+ ([^' ''\t']+ as tok) sp+
+  | "printing"("_command"* as macro) sp+ ([^' ''\t']+ as tok)
     {let is_macro = if String.length macro > 0 then true else false in
-    print_endline ("printing: " ^ tok);
       get_flush (); Queue.push (ADD_PRINTING (is_macro,tok)) tokens; Queue.pop tokens}
 
   | eof { (if (Buffer.length buff <> 0) then get_flush ()); treat_eof ()}

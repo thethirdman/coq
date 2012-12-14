@@ -31,9 +31,10 @@ let rec extract_queries = function
   `Query (name, arglist) -> `Query (name, arglist)
   | d -> `Doc d
 
-(** This function sets up the necessary rules in order to
- * locate identifiers and translate them into cst.doc *)
-let initialize =
+(** This function sets up the necessary rules in order to:
+ * locate identifiers and translate them into cst.doc
+ * translate such identifiers into hyperlinks if necessary *)
+let initialize_code_rules =
   let initialized = ref false in
   (fun ct ->
   if not !initialized then
@@ -52,7 +53,7 @@ let initialize =
 
 (** Does the translation from code to doc *)
 let handle_code ct i_type code =
-  initialize ct;
+  initialize_code_rules ct;
   if i_type = Settings.IVernac then
     (** We first evaluate the code in order to manage the identifiers *)
     begin
@@ -62,13 +63,65 @@ let handle_code ct i_type code =
   else
     `Doc (`Content code)
 
+(** This function adds a match rule for a given printing rule. *)
+let handle_add_printing pr =
+  let open Xml_pp in let open Annotations in let open Cst in
+  (** Extract the metavars in order to generate the argument list given to
+   * Output_command type *)
+  let extract_metavars lst = List.fold_left
+    (fun acc elt -> match elt with
+      | ATag (C_UnpMetaVar, [AString s]) -> s::acc
+      |_ -> acc) [] lst in
+
+  (** Tests if a given symbol matches the template (spaces arounds
+   * the symbol are ignored) *)
+  let sym_tst e match_elt = match e with
+  ATag (C_UnpTerminal, [AString s]) ->
+    Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0
+  | _ -> false in
+
+  (** If the printing rule is translated into a command, the generated type
+   * is an output_command that the backends will handle *)
+  if pr.is_command then
+    add_rule C_CNotation
+    (fun fallback args ->
+      if (List.exists (fun e -> sym_tst e pr.match_element)
+          args) then
+            `Output_command (pr.replace_with, extract_metavars args)
+      else
+          fallback args)
+  (* Else, the printing rule is translated into a simple raw_command *)
+  else
+    Annotations.add_rule Xml_pp.C_UnpTerminal
+    (fun fallback args -> match args with
+      [Annotations.AString s]
+        when (Str.string_match (Str.regexp (" *" ^ pr.match_element ^ " *")) s 0)
+        -> `Raw (pr.replace_with)
+      |_ -> fallback args)
+
+(** Handle the documentation translation: queries are extracted and
+ * printing_rule are evaluated
+ *)
+let rec handle_doc elt acc = match elt with
+  `Query n -> (`Query n)::acc
+  | `Add_printing pr -> handle_add_printing pr; acc
+  | `Rm_printing elt ->
+      Annotations.add_rule Xml_pp.C_UnpTerminal
+        (fun fallback args -> match args with
+          [Annotations.AString s] when s = elt -> `Content elt
+          | _ -> fallback args); acc
+  | `Seq lst -> List.fold_right (fun elt acc -> (handle_doc elt [])@acc) lst
+    acc
+  | d -> (`Doc d)::acc
+
+
 (** Cst.cst -> ast *)
 let rec translate ct i_type cst =
-  let rec aux elt acc = match elt with
-    Cst.Doc d    -> (extract_queries d)::acc
+  let rec aux acc elt = match elt with
+    Cst.Doc d    -> handle_doc d acc
     | Cst.Code code -> (handle_code ct i_type code)::acc
     | _          -> acc (* FIXME: real type *) in
-    List.fold_right aux cst []
+    List.fold_left aux [] cst
 
 (* Evaluates the queries of an ast *)
 let rec eval ast = assert false

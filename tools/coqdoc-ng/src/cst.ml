@@ -34,6 +34,12 @@ type doc = [
   | `Verbatim of string
   | `Content of string
 
+  (** This is an output specific command: the idea is to generate a command
+   * call inside the generated document.
+   * The first element is the command to call; The second element is the list
+   * of arguments given to this command. Each backend should implement its
+   * way to output commands *)
+  | `Output_command of raw_content * string list
   (** Type for hyperlinks:
     * - A Root defines the destination of a link
     * - A Link defines a reference to a root
