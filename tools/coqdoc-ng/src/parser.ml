@@ -455,7 +455,7 @@ and _menhir_goto_list_parse_seq_ : _menhir_env -> 'ttv_tail -> _menhir_state -> 
             ((let (_menhir_stack, _menhir_s, lst) = _menhir_stack in
             let _v : (
 # 16 "parser.mly"
-      (Cst.doc)
+      (Cst.doc_with_eval)
 # 460 "parser.ml"
             ) = 
 # 56 "parser.mly"
@@ -467,7 +467,7 @@ and _menhir_goto_list_parse_seq_ : _menhir_env -> 'ttv_tail -> _menhir_state -> 
             let (_menhir_s : _menhir_state) = _menhir_s in
             let (_v : (
 # 16 "parser.mly"
-      (Cst.doc)
+      (Cst.doc_with_eval)
 # 472 "parser.ml"
             )) = _v in
             ((let (_menhir_env : _menhir_env) = _menhir_env in
@@ -475,7 +475,7 @@ and _menhir_goto_list_parse_seq_ : _menhir_env -> 'ttv_tail -> _menhir_state -> 
             let (_menhir_s : _menhir_state) = _menhir_s in
             let (_v : (
 # 16 "parser.mly"
-      (Cst.doc)
+      (Cst.doc_with_eval)
 # 480 "parser.ml"
             )) = _v in
             ((let (_menhir_env : _menhir_env) = _menhir_env in
@@ -483,7 +483,7 @@ and _menhir_goto_list_parse_seq_ : _menhir_env -> 'ttv_tail -> _menhir_state -> 
             let (_menhir_s : _menhir_state) = _menhir_s in
             let (_1 : (
 # 16 "parser.mly"
-      (Cst.doc)
+      (Cst.doc_with_eval)
 # 488 "parser.ml"
             )) = _v in
             (Obj.magic _1 : 'freshtv208)) : 'freshtv210)) : 'freshtv212)) : 'freshtv214)) : 'freshtv216)
@@ -1530,7 +1530,7 @@ and _menhir_init : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> _menhir_env =
 
 and parse_doc : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
 # 16 "parser.mly"
-      (Cst.doc)
+      (Cst.doc_with_eval)
 # 1535 "parser.ml"
 ) =
   fun lexer lexbuf ->

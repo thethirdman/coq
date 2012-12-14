@@ -1,35 +1,22 @@
-(* This module contains the AST representation
- * the evaluation of this ast creates an abstract representation of
- * what will be put in the .vdoc
+(** This module contains the evaluation rule in order
+ * to get from a Cst.doc_with_eval to a Cst.doc_no_eval
  *)
 
-(** stores the defined symbols in coqdoc: primitives and user-defined functions
- (symbol * (name -> context -> arglist -> doc) list
- *)
 open Settings
 open Coqtop_handle
 
+(** stores the defined symbols in coqdoc: primitives and user-defined
+ * functions *)
 let symbol_table = () (* Hashtbl.create 42*)
 
 type symbol = string
 type arglist = string list
 type query = (symbol * arglist)
 
-(*FIXME: set up real type *)
-type context = unit
 
 
-type no_query = [ `Doc of Cst.doc ]
 
-type with_query = [`Query of query | no_query ];;
 
-type ast_with_query = with_query list
-type ast_no_query = no_query list
-
-(** Cst.doc -> ast: extract the queries to evaluate *)
-let rec extract_queries = function
-  `Query (name, arglist) -> `Query (name, arglist)
-  | d -> `Doc d
 
 (** This function sets up the necessary rules in order to:
  * locate identifiers and translate them into cst.doc
@@ -61,7 +48,23 @@ let handle_code ct i_type code =
       Annotations.doc_of_vernac ct code
     end
   else
-    `Doc (`Content code)
+    (`Content code)
+
+
+
+
+
+(** Tests if a given symbol matches the template (spaces arounds
+ * the symbol are ignored) *)
+let cmp_command e match_elt =
+  let open Annotations in let open Xml_pp in
+  match e with
+    ATag (C_UnpTerminal, [AString s]) ->
+      Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0
+    | _ -> false
+
+let cmp_symbol e match_elt =
+   (Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) e 0)
 
 (** This function adds a match rule for a given printing rule. *)
 let handle_add_printing pr =
@@ -73,19 +76,12 @@ let handle_add_printing pr =
       | ATag (C_UnpMetaVar, [AString s]) -> s::acc
       |_ -> acc) [] lst in
 
-  (** Tests if a given symbol matches the template (spaces arounds
-   * the symbol are ignored) *)
-  let sym_tst e match_elt = match e with
-  ATag (C_UnpTerminal, [AString s]) ->
-    Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0
-  | _ -> false in
-
   (** If the printing rule is translated into a command, the generated type
    * is an output_command that the backends will handle *)
   if pr.is_command then
     add_rule C_CNotation
     (fun fallback args ->
-      if (List.exists (fun e -> sym_tst e pr.match_element)
+      if (List.exists (fun e -> cmp_command e pr.match_element)
           args) then
             `Output_command (pr.replace_with, extract_metavars args)
       else
@@ -94,43 +90,51 @@ let handle_add_printing pr =
   else
     Annotations.add_rule Xml_pp.C_UnpTerminal
     (fun fallback args -> match args with
-      [Annotations.AString s]
-        when (Str.string_match (Str.regexp (" *" ^ pr.match_element ^ " *")) s 0)
+      [Annotations.AString s] when cmp_symbol s pr.match_element
         -> `Raw (pr.replace_with)
       |_ -> fallback args)
 
-(** Handle the documentation translation: queries are extracted and
- * printing_rule are evaluated
- *)
-let rec handle_doc elt acc = match elt with
-  `Query n -> (`Query n)::acc
-  | `Add_printing pr -> handle_add_printing pr; acc
+
+
+
+
+(** Utility function: only inserts into the output list that are <> None *)
+let opt_map f lst = List.fold_right
+  (fun elt acc -> match f elt with
+    None -> acc
+      | Some result -> result::acc) lst []
+
+(* Evaluates the queries of an ast *)
+let rec eval_rec_element = function
+    `List doclst     -> `List (opt_map eval_doc doclst)
+    | `Item (n, d)   -> `Item (n, eval_full_doc d)
+    | `Emphasis d    -> `Emphasis (eval_full_doc d)
+    | `Root (d, str) -> `Root (eval_full_doc d, str)
+    | `Link (d, str) -> `Link (eval_full_doc d, str)
+    | `Seq doc_lst   -> `Seq (opt_map eval_doc doc_lst)
+
+and eval_eval_element = function
+  | `Add_printing pr -> handle_add_printing pr; None
   | `Rm_printing elt ->
       Annotations.add_rule Xml_pp.C_UnpTerminal
         (fun fallback args -> match args with
-          [Annotations.AString s] when s = elt -> `Content elt
-          | _ -> fallback args); acc
-  | `Seq lst -> List.fold_right (fun elt acc -> (handle_doc elt [])@acc) lst
-    acc
-  | d -> (`Doc d)::acc
+          [Annotations.AString s] when cmp_symbol s elt -> `Content elt
+          | _ -> fallback args); None
+  | `Query (name,arg_lst) -> Some (`Content ("query: " ^ name)) (** FIXME: replace with eval_query *)
 
+and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
+  #Cst.flat_element as q -> Some q
+  | #Cst.rec_element as r -> Some (eval_rec_element r)
+  | #Cst.eval_element as e -> eval_eval_element e
 
-(** Cst.cst -> ast *)
-let rec translate ct i_type cst =
-  let rec aux acc elt = match elt with
-    Cst.Doc d    -> handle_doc d acc
-    | Cst.Code code -> (handle_code ct i_type code)::acc
-    | _          -> acc (* FIXME: real type *) in
-    List.fold_left aux [] cst
+and eval_full_doc cst =
+  match opt_map eval_doc [cst] with
+  [elt] -> elt
+  |_ -> assert false
 
-(* Evaluates the queries of an ast *)
-let rec eval ast = assert false
-  (*let aux : with_query -> no_query = function
-    #no_query as q -> q
-    | `Query (name, arglist) ->
-        try
-          `Doc ((Hashtbl.find symbol_table name) () arglist)
-        with Not_found -> Printf.fprintf stderr "Error: Invalid query \"%s\"\n"
-        name; exit 1
-  in
-  List.map aux ast*)
+let eval_cst ct i_type cst =
+  let aux = function
+    Cst.Doc d -> eval_full_doc d
+    | Cst.Code c -> handle_code ct i_type c
+    |_ -> `Content "" in
+  List.map aux cst

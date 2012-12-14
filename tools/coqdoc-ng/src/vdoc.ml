@@ -12,7 +12,7 @@ module Backend =
     sig
       val initialize : unit    -> unit
       val header     : unit    -> string
-      val doc        : Cst.doc -> string option
+      val doc        : Cst.doc_no_eval -> string option
       val indent     : int     -> string (*FIXME: not used right now*)
       val newline    : unit    -> string (*FIXME: idem *)
       val index      : 'a list -> string

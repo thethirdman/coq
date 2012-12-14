@@ -27,4 +27,4 @@ type token =
 
 
 val parse_vernac: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (string Cst.cst_node)
-val parse_doc: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (Cst.doc)
+val parse_doc: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (Cst.doc_with_eval)

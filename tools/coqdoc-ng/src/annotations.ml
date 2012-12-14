@@ -56,13 +56,14 @@ let annot_of_vernac ct vernac_string =
   in un_xml xml_result
 
 
-(** The following section handles the translations rules from annot to Cst.doc
+(** The following section handles the translations rules from annot to
+ * Cst.doc_with_eval
  *
  * In order to allow user-defined interactions, we use a chain-of-control
  * design pattern.
  * We use a hashtable to store translation rules: the key is the tag
  * (Xml_pp.context_tag) on which the rule applies, while the content is the
- * function which does the translation from annot to Cst.doc *)
+ * function which does the translation from annot to Cst.doc_with_eval *)
 let code_rules = Hashtbl.create 42
 
 (** Function to add rules to the hashtable.
@@ -78,13 +79,13 @@ let add_rule tag f =
   with Not_found -> Hashtbl.add code_rules tag (f (fun _ -> raise Not_found))
 
 (** This function handle the calling of the rules in order to do the
-  * translation from annot to doc. It returns a Cst.doc
+  * translation from annot to doc. It returns a Cst.doc_with_eval
   *)
 let rec doc_of_annot annot =
   match annot with
        | AString s -> `Code [Cst.NoFormat s]
        | ATag (node, values) ->
-           try (((Hashtbl.find code_rules node) values):Cst.doc)
+           try (((Hashtbl.find code_rules node) values):Cst.doc_no_eval)
            with Not_found -> `Seq (List.map doc_of_annot values)
 
 (** Utility: string -> Cst.code
@@ -146,6 +147,5 @@ let doc_of_vernac ct code =
     (try
       let annot_lst = annot_of_vernac ct code in
         `Seq (List.map doc_of_annot annot_lst)
-      with Invalid_argument _ ->
-        `Code [maybe_symbol (fun e -> Cst.NoFormat e) code]) in
-    `Doc ret
+    with Invalid_argument s -> print_endline  s;
+        `Code [maybe_symbol (fun e -> Cst.NoFormat e) code]) in ret
