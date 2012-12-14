@@ -261,7 +261,7 @@ and _menhir_goto_list_parse_term_ : _menhir_env -> 'ttv_tail -> _menhir_state ->
         ((let ((_menhir_stack, _menhir_s), _, c) = _menhir_stack in
         let _v : 'tv_parse_lst = 
 # 72 "parser.mly"
-  ((`Item  (0,`Seq c)) )
+  (`Item  (`Seq c) )
 # 266 "parser.ml"
          in
         _menhir_goto_parse_lst _menhir_env _menhir_stack _menhir_s _v) : 'freshtv246)) : 'freshtv248)

@@ -20,7 +20,7 @@ let id_index = Hashtbl.create 42
  * FIXME: This is currently a naive implementation. There may be a way to
  * handle identifiers, calling only the locate command if necesary.
  *)
-let handle_id ct id_str =
+let make_hyperlink ct id_str =
   let loc_info = Coqtop.handle_value (Coqtop.locate ct id_str) in
   match loc_info with
   | None -> None (* no reference has been found *)

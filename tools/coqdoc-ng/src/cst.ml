@@ -5,7 +5,7 @@
 exception End_of_file
 
 (* Type representing inline tex/html in source files; Also contains a
- * default rule in case the output type is not handled *)
+ * default case if the used output field in the backend is not handled *)
 type raw_content = { latex : string; latex_math : string; html : string;
                       default : string}
 
@@ -14,6 +14,11 @@ type code =  Keyword of string | Ident of string | Literal of string
             | Tactic of string
             | Symbol of string | NoFormat of string
 
+(** Describes a user-defined printing rule. This type handles both
+ * printing and printing_command commands (differentiated with the
+ * is_command bool. The match_element is the element that should be replaced
+ * by replace_with (which is a raw_content in order to have its output
+ * "backend free", the default field containing the match_element *)
 type printing_rule = {
   is_command : bool;
   match_element : string;
@@ -55,7 +60,7 @@ type eval_element =
 type 'a rec_element =
   (* Type for documentation lists *)
   [ `List of 'a list
-  | `Item of (int * 'a) (* List items in coqdoc *)
+  | `Item of 'a (* List items in coqdoc *)
   | `Emphasis of 'a
   (** Type for hyperlinks:
     * - A Root defines the destination of a link
@@ -66,11 +71,16 @@ type 'a rec_element =
   (* Type for a sequence of doc elements: DO NOT CONFUSE WITH `List *)
   | `Seq of 'a list ]
 
-type doc_no_eval = [flat_element | doc_no_eval rec_element]
+(** Types representing the documentation elements (what is located inside
+ * documentations comments in the source file), before and after evaluation.
+ *)
 type doc_with_eval = [flat_element | eval_element | doc_with_eval rec_element]
+type doc_no_eval = [flat_element | doc_no_eval rec_element]
 
 
-(* Final CST *)
+(** Type containing the full input file structure. After evaluation,
+ * everything is translated into a do_no_eval type: comments are discarded
+ * and code is translated into formatted documentation *)
 type 'a cst_node =
   | Comment of string
   | Doc of 'a

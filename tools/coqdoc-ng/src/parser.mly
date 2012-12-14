@@ -69,7 +69,7 @@ parse_lst:
 | LST lst=list(parse_lst) ENDLST
   {`List lst}
 | ITEM c=list(parse_term)
-  {(`Item  (0,`Seq c)) }
+  {`Item  (`Seq c) }
 
 (* Basic elements of documentation strings *)
 parse_term:

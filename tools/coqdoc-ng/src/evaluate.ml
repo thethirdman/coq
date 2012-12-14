@@ -14,20 +14,16 @@ type arglist = string list
 type query = (symbol * arglist)
 
 
-
-
-
-
 (** This function sets up the necessary rules in order to:
- * locate identifiers and translate them into cst.doc
- * translate such identifiers into hyperlinks if necessary *)
+ * locate identifiers and translate them into cst.doc and
+ * hyperlinks if necessary *)
 let initialize_code_rules =
   let initialized = ref false in
   (fun ct ->
   if not !initialized then
     (let id_manage = (fun fallback args -> match args with
       | [Annotations.AString id] ->
-          begin match Hyperlinks.handle_id ct id with
+          begin match Hyperlinks.make_hyperlink ct id with
           None -> fallback args
           | Some (`Root (name, path)) -> `Root (fallback args, path)
           | Some (`Link (name, path)) -> `Link (fallback args, path)
@@ -51,9 +47,6 @@ let handle_code ct i_type code =
     (`Content code)
 
 
-
-
-
 (** Tests if a given symbol matches the template (spaces arounds
  * the symbol are ignored) *)
 let cmp_command e match_elt =
@@ -74,6 +67,7 @@ let handle_add_printing pr =
   let extract_metavars lst = List.fold_left
     (fun acc elt -> match elt with
       | ATag (C_UnpMetaVar, [AString s]) -> s::acc
+      | ATag (C_UnpMetaVar, [ATag (_,[AString s])]) -> s::acc
       |_ -> acc) [] lst in
 
   (** If the printing rule is translated into a command, the generated type
@@ -95,9 +89,6 @@ let handle_add_printing pr =
       |_ -> fallback args)
 
 
-
-
-
 (** Utility function: only inserts into the output list that are <> None *)
 let opt_map f lst = List.fold_right
   (fun elt acc -> match f elt with
@@ -107,7 +98,7 @@ let opt_map f lst = List.fold_right
 (* Evaluates the queries of an ast *)
 let rec eval_rec_element = function
     `List doclst     -> `List (opt_map eval_doc doclst)
-    | `Item (n, d)   -> `Item (n, eval_full_doc d)
+    | `Item  d       -> `Item (eval_full_doc d)
     | `Emphasis d    -> `Emphasis (eval_full_doc d)
     | `Root (d, str) -> `Root (eval_full_doc d, str)
     | `Link (d, str) -> `Link (eval_full_doc d, str)
@@ -130,7 +121,7 @@ and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
 and eval_full_doc cst =
   match opt_map eval_doc [cst] with
   [elt] -> elt
-  |_ -> assert false
+  |_ -> `Content ""
 
 let eval_cst ct i_type cst =
   let aux = function
