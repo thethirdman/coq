@@ -54,49 +54,6 @@ let handle_code ct i_type code =
 
 
 
-(** Tests if a given symbol matches the template (spaces arounds
- * the symbol are ignored) *)
-let cmp_command e match_elt =
-  let open Annotations in let open Xml_pp in
-  match e with
-    ATag (C_UnpTerminal, [AString s]) ->
-      Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0
-    | _ -> false
-
-let cmp_symbol e match_elt =
-   (Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) e 0)
-
-(** This function adds a match rule for a given printing rule. *)
-let handle_add_printing pr =
-  let open Xml_pp in let open Annotations in let open Cst in
-  (** Extract the metavars in order to generate the argument list given to
-   * Output_command type *)
-  let extract_metavars lst = List.fold_left
-    (fun acc elt -> match elt with
-      | ATag (C_UnpMetaVar, [AString s]) -> s::acc
-      |_ -> acc) [] lst in
-
-  (** If the printing rule is translated into a command, the generated type
-   * is an output_command that the backends will handle *)
-  if pr.is_command then
-    add_rule C_CNotation
-    (fun fallback args ->
-      if (List.exists (fun e -> cmp_command e pr.match_element)
-          args) then
-            `Output_command (pr.replace_with, extract_metavars args)
-      else
-          fallback args)
-  (* Else, the printing rule is translated into a simple raw_command *)
-  else
-    Annotations.add_rule Xml_pp.C_UnpTerminal
-    (fun fallback args -> match args with
-      [Annotations.AString s] when cmp_symbol s pr.match_element
-        -> `Raw (pr.replace_with)
-      |_ -> fallback args)
-
-
-
-
 
 (** Utility function: only inserts into the output list that are <> None *)
 let opt_map f lst = List.fold_right
@@ -114,12 +71,8 @@ let rec eval_rec_element = function
     | `Seq doc_lst   -> `Seq (opt_map eval_doc doc_lst)
 
 and eval_eval_element = function
-  | `Add_printing pr -> handle_add_printing pr; None
-  | `Rm_printing elt ->
-      Annotations.add_rule Xml_pp.C_UnpTerminal
-        (fun fallback args -> match args with
-          [Annotations.AString s] when cmp_symbol s elt -> `Content elt
-          | _ -> fallback args); None
+  | `Add_printing pr -> Annotations.add_printing_rule pr; None
+  | `Rm_printing elt -> Annotations.rm_printing_rule elt; None
   | `Query (name,arg_lst) -> Some (`Content ("query: " ^ name)) (** FIXME: replace with eval_query *)
 
 and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function

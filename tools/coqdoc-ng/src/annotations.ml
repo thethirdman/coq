@@ -140,6 +140,79 @@ let _ =
 
   end
 
+(* The following section defines help function and a set of rules used for
+ * translating printing rules defined by the user. *)
+
+(** Tests if a given symbol matches the template (spaces arounds
+ * the symbol are ignored) *)
+let cmp_command e match_elt =
+  match e with
+    ATag (Xml_pp.C_UnpTerminal, [AString s]) ->
+      Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0
+    | _ -> false
+
+let cmp_symbol e match_elt =
+   (Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) e 0)
+
+(** Extract the metavars in order to generate the argument list given to
+ * Output_command type *)
+let extract_metavars lst = List.fold_left
+  (fun acc elt -> match elt with
+    | ATag (Xml_pp.C_UnpMetaVar, [AString s]) -> s::acc
+    |_ -> acc) [] lst
+
+let add_printing_rule pr =
+  let open Cst in
+  (** If the printing rule is translated into a command, the generated type
+   * is an output_command that the backends will handle *)
+  if pr.is_command then
+    add_rule Xml_pp.C_CNotation
+    (fun fallback args ->
+      if (List.exists (fun e -> cmp_command e pr.match_element)
+          args) then
+            `Output_command (pr.replace_with, extract_metavars args)
+      else
+          fallback args)
+  (* Else, the printing rule is translated into a simple raw_command *)
+  else
+    add_rule Xml_pp.C_UnpTerminal
+    (fun fallback args -> match args with
+      [AString s] when cmp_symbol s pr.match_element
+        -> `Raw (pr.replace_with)
+      |_ -> fallback args)
+
+let rm_printing_rule match_elt =
+  add_rule Xml_pp.C_UnpTerminal
+    (fun fallback args -> match args with
+      [AString s] when cmp_symbol s match_elt -> `Content match_elt
+      | _ -> fallback args)
+
+let _ =
+  let open Cst in
+  let default_symbols = [
+    (* default symbol, latex, html *)
+  ("*" ,     "\\ensuremath{\\times}",                  "");
+	("|",      "\\ensuremath{|}",                        "");
+	("->",     "\\ensuremath{\\rightarrow}",             "");
+	("->~",    "\\ensuremath{\\rightarrow\\lnot}",       "");
+	("->~~",   "\\ensuremath{\\rightarrow\\lnot\\lnot}", "");
+	("<-",     "\\ensuremath{\\leftarrow}",              "");
+	("<->",    "\\ensuremath{\\leftrightarrow}",         "");
+	("=>",     "\\ensuremath{\\Rightarrow}",             "");
+	("<=",     "\\ensuremath{\\le}",                     "");
+	(">=",     "\\ensuremath{\\ge}",                     "");
+	("<>",     "\\ensuremath{\\not=}",                   "");
+	("~",      "\\ensuremath{\\lnot}",                   "");
+	("/\\",    "\\ensuremath{\\land}",                   "");
+	("\\/",    "\\ensuremath{\\lor}" ,                   "");
+	("|-",     "\\ensuremath{\\vdash}",                  "");
+	("forall", "\\ensuremath{\\forall}",                 "");
+  ("exists", "\\ensuremath{\\exists}",                 "");] in
+
+  List.iter (fun (def, latex, html) ->
+    add_printing_rule {is_command = false; match_element = def;
+    replace_with = {default = def; latex = latex; html=html; latex_math = ""}})
+  default_symbols
 
 (** Does the full translation from vernac to doc type *)
 let doc_of_vernac ct code =
