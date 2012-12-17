@@ -51,7 +51,7 @@
 
 }
 
-let sp = [' '  '\t']
+let sp = ' ' | '\t'
 let nl = "\r\n" | '\n'
 
 let tok_reg = "[" | "]" | "[[" | "]]" | "<<" | ">>" | "----" | "_" | "%"
@@ -62,9 +62,10 @@ let name = ['a'-'z''A'-'Z''0'-'9']+
 
 rule lex_doc = parse
   (** Token matching *)
-  | sp_nl* (tok_reg as tok) sp_nl*
-    {get_flush (); Queue.push (Hashtbl.find tok_htbl tok) tokens;
-      Queue.pop tokens}
+  | (sp_nl* as before) (tok_reg as tok) (sp_nl* as after)
+    {Buffer.add_string buff before;
+    get_flush (); Queue.push (Hashtbl.find tok_htbl tok) tokens;
+    Buffer.add_string buff after;  Queue.pop tokens}
 
     (** Query matching, the arguments are split in the parser *)
   | '@' (name as query) '{' (_* as arglist) '}'
@@ -72,7 +73,7 @@ rule lex_doc = parse
     Queue.pop tokens}
 
     (** Section matching: the importance of the title is the number of stars *)
-  | ("*"+ as lvl) ' ' ([^'\n']+ as title)
+  | sp+ ("*"+ as lvl) sp+ ([^'\n']+ as title)
     {get_flush (); Queue.push (SECTION ((String.length lvl), title)) tokens;
     Queue.pop tokens}
 
@@ -98,8 +99,5 @@ rule lex_doc = parse
   | "printing"("_command"* as macro) sp+ ([^' ''\t']+ as tok)
     {let is_macro = if String.length macro > 0 then true else false in
       get_flush (); Queue.push (ADD_PRINTING (is_macro,tok)) tokens; Queue.pop tokens}
-  | (("begin" | "end") as com ) sp+ (("show" | "hide") as arg)
-    { get_flush (); Queue.push (SHOW_CONTROL (com,arg)) tokens;
-      Queue.pop tokens}
   | eof { (if (Buffer.length buff <> 0) then get_flush ()); treat_eof ()}
   | _ as c {Buffer.add_char buff c; lex_doc lexbuf}

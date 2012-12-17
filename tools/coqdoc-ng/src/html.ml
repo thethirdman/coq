@@ -54,7 +54,7 @@ let doc cst =
     | `Pretty_print s  -> sprintf "[[%s]]" s
     | `Section (lvl,s) -> sprintf "<h%d class=\"section\">%s</h%d>" lvl s lvl
     | `Hrule           -> "<hr/>"
-    | `Raw raw         -> raw.html
+    | `Raw raw         -> if raw.html <> "" then raw.html else raw.default
     | `Verbatim s      -> sprintf"<tt>%s</tt>" s
     | `Content s       -> s
     | `Output_command (raw,args) -> print_with_sep raw.html args
@@ -67,6 +67,7 @@ let doc cst =
     | `Seq lst -> print_with_sep "" (List.map print_no_eval lst)
     | `Root (a,b) -> sprintf "<a id=\"%s\">%s</a>" b (print_no_eval a)
     | `Link (a,b) -> sprintf "<a href=\"%s\">%s</a>" b (print_no_eval a)
+    | `Item doc -> sprintf "<li>%s</li>" (print_no_eval doc)
     | _ -> raise Unhandled_case
 
   and print_no_eval = function

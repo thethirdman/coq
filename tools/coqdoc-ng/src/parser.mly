@@ -8,7 +8,6 @@
 %token <string> CONTENT RM_PRINTING
 %token <bool*string> ADD_PRINTING
 %token <string*string> QUERY
-%token <string*string> SHOW_CONTROL
 
 %start parse_vernac parse_doc
 
@@ -100,13 +99,6 @@ STARTVERNAC CONTENT ENDVERNAC
 { `Rm_printing tok }
 | raw_terms
   {`Raw $1}
-| show_contr=SHOW_CONTROL
-{ `Control (match show_contr with
-  | "begin","show" -> Cst.BeginShow
-  | "begin","hide" -> Cst.BeginHide
-  | "end","show" ->   Cst.EndShow
-  | "end","hide" ->  Cst.EndHide
-  | _,_ -> assert false)}
 
 raw_terms:
 | LATEX CONTENT LATEX

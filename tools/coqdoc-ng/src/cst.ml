@@ -45,14 +45,11 @@ type flat_element =
   (* Type for formatted code output: list of code elements *)
   | `Code of code list ]
 
-type show_control = BeginShow | BeginHide | EndShow | EndHide
-
 (** This type contains all the elements that will be evaluated.
  * They will disappear in the final document *)
 type eval_element =
   [ `Add_printing of printing_rule
   | `Rm_printing of string
-  | `Control of show_control
   (* Type for documentation queries: @name{arg_list} *)
   | `Query of (string*string list) ]
 

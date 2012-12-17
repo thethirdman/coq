@@ -15,6 +15,8 @@ o 0.1: Squelette
       -> Patcher le type cst.doc: `Item, `List, `Seq ...
       -> faire le ménage dans le lexer et le parser
           -> remove `Seq type
+      FIXME:
+        - printing des liens avec des raw_doc dedans
 [TODO]
 o 0.1: Version préliminaire
       -> Possède juste la traduction .v -> .html

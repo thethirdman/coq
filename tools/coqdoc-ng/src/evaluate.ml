@@ -78,12 +78,6 @@ and eval_eval_element = function
   | `Add_printing pr -> Annotations.add_printing_rule pr; None
   | `Rm_printing elt -> Annotations.rm_printing_rule elt; None
   | `Query (name,arg_lst) -> Some (`Content "") (** FIXME: replace with eval_query *)
-  | `Control c -> begin match c with
-                  | Cst.BeginShow -> (fst code_show) := true
-                  | Cst.BeginHide -> (fst code_show) := false
-                  | Cst.EndShow   -> (fst code_show) := (snd code_show)
-                  | Cst.EndHide   -> (fst code_show) := (snd code_show)
-                  end; None
 
 and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
   #Cst.flat_element as q -> Some q
@@ -98,4 +92,16 @@ and eval_full_doc cst =
 let eval_cst ct i_type = function
     Cst.Doc d -> eval_full_doc d
     | Cst.Code c -> handle_code ct i_type c
-    |_ -> `Content ""
+    (**FIXME: this is ugly, ideally there would be parser + lexer for comments
+     * but ... flemme *)
+    | Cst.Comment c -> let reg = Str.regexp
+        ".*\\(begin\\|end\\) +\\(show\\|hide\\).*" in
+    if Str.string_match reg c 0 then
+          begin
+            match (Str.matched_group 1 c, Str.matched_group 2 c) with
+            | "begin","show" -> (fst code_show) := true
+            | "begin","hide" -> (fst code_show) := false
+            | "end","show"
+            | "end","hide"   -> (fst code_show) := (snd code_show)
+            | (a,b) -> raise (Invalid_argument ("when treating " ^ a ^ " " ^ b))
+          end; `Content ""
