@@ -13,8 +13,9 @@ type symbol = string
 type arglist = string list
 type query = (symbol * arglist)
 
-
-
+(** Show ? * default *)
+(** FIXME: real values *)
+let code_show = (ref true, true)
 
 
 
@@ -45,7 +46,10 @@ let handle_code ct i_type code =
     (** We first evaluate the code in order to manage the identifiers *)
     begin
       ignore (Coqtop.interp ct Coqtop.default_logger code);
-      Annotations.doc_of_vernac ct code
+      if !(fst code_show) then
+        Annotations.doc_of_vernac ct code
+      else
+        (`Content "")
     end
   else
     (`Content code)
@@ -74,6 +78,12 @@ and eval_eval_element = function
   | `Add_printing pr -> Annotations.add_printing_rule pr; None
   | `Rm_printing elt -> Annotations.rm_printing_rule elt; None
   | `Query (name,arg_lst) -> Some (`Content ("query: " ^ name)) (** FIXME: replace with eval_query *)
+  | `Control c -> begin match c with
+                  | Cst.BeginShow -> (fst code_show) := true
+                  | Cst.BeginHide -> (fst code_show) := false
+                  | Cst.EndShow   -> (fst code_show) := (snd code_show)
+                  | Cst.EndHide   -> (fst code_show) := (snd code_show)
+                  end; None
 
 and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
   #Cst.flat_element as q -> Some q

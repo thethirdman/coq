@@ -6,6 +6,7 @@ type token =
   | STARTPP
   | STARTDOC
   | STARTCOM
+  | SHOW_CONTROL of (string*string)
   | SECTION of (int*string)
   | RM_PRINTING of (string)
   | QUERY of (string*string)

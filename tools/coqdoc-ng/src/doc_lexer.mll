@@ -98,6 +98,8 @@ rule lex_doc = parse
   | "printing"("_command"* as macro) sp+ ([^' ''\t']+ as tok)
     {let is_macro = if String.length macro > 0 then true else false in
       get_flush (); Queue.push (ADD_PRINTING (is_macro,tok)) tokens; Queue.pop tokens}
-
+  | (("begin" | "end") as com ) sp+ (("show" | "hide") as arg)
+    { get_flush (); Queue.push (SHOW_CONTROL (com,arg)) tokens;
+      Queue.pop tokens}
   | eof { (if (Buffer.length buff <> 0) then get_flush ()); treat_eof ()}
   | _ as c {Buffer.add_char buff c; lex_doc lexbuf}
