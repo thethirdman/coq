@@ -298,15 +298,16 @@ let rec prettyprint s =
   let last_parse = snd (Loc.unloc loc) in
   let ret = Pp.string_of_ppcmds (Ppvernac.pr_vernac ast) in
   Xml_pp.enable_flat_pp ();
-  if last_parse < len then 
+  if last_parse < len then
     (** If the string we obtain is not fully parsed, we
 	continue on the part of the string that was not
 	consumed by the parser. *)
     (* FIXME: Should we use Buffer to improve the following
        FIXME: code? *)
-    ret 
-    ^ "\n" 
-    ^ (prettyprint (String.sub s (last_parse) (len - last_parse)))
+    ret
+    ^ "\n"
+    ^ (try prettyprint (String.sub s (last_parse) (len - last_parse))
+       with Vernac.End_of_input _ -> "")
   else
     ret
 
