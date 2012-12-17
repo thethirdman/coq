@@ -63,7 +63,15 @@ let resolve_coqtop_interaction inputs =
     output format.
 *)
 let backend resolved_inputs =
-  assert false
+  match Settings.output_type (Settings.output_document ()) with
+  | Settings.OHTML ->
+      let module Backend = Vdoc.Backend(Html) in
+      let print = Backend.transform
+        (Settings.output_channel (Settings.output_document ()))
+        (fun s -> "fixme") in
+      List.iter print resolved_inputs
+  | Settings.OLaTeX -> assert false
+  | Settings.OPrettyPrint -> assert false
 
 (** Coqdoc is a composition of the passes described below. *)
 let coqdoc =
