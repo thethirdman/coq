@@ -91,19 +91,18 @@ let default_output = {
 
 (** Global settings. *)
 let io = {
-  input      = [ default_input ];
+  input      = [];
   output     = default_output;
   input_type = IVernac;
 }
 
 (** Load a document. *)
 let extension_of_filename fname =
+  let reg = Str.regexp "\\." in
   try
-    let wo_ext   = Filename.chop_extension fname in
-    let len_base = String.length wo_ext in
-    String.sub fname (len_base + 1) (String.length fname - len_base - 1)
-  with Invalid_argument "Filename.chop_extension" ->
-    "(no extension)"
+    let off = Str.search_backward reg fname (String.length fname) in
+    (Str.string_after fname off)
+  with Not_found -> "(no extension)"
 
 let load_input_document fname = try {
   document_filename = Named fname;
@@ -213,6 +212,8 @@ let check_settings_consistency () =
 (** Parses the command line and sets up the variables. *)
 let parse () =
   Arg.parse speclist parse_anon usage;
+  (** If no input files are given, then we read stdin *)
+  if io.input = [] then io.input <- [default_input];
   print_help_if_required ();
   check_settings_consistency ()
 
