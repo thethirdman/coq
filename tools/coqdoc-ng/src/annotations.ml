@@ -158,7 +158,7 @@ let cmp_symbol e match_elt =
  * Output_command type *)
 let extract_metavars lst = List.fold_left
   (fun acc elt -> match elt with
-    | ATag (Xml_pp.C_UnpMetaVar, [AString s]) -> s::acc
+    | ATag (Xml_pp.C_UnpMetaVar, [ATag (_,[AString s])]) -> s::acc
     |_ -> acc) [] lst
 
 let add_printing_rule pr =
@@ -202,9 +202,9 @@ let _ =
 	("<=",     "\\ensuremath{\\le}",                     "");
 	(">=",     "\\ensuremath{\\ge}",                     "");
 	("<>",     "\\ensuremath{\\not=}",                   "");
-	("~",      "\\ensuremath{\\lnot}",                   "");
-	("/\\",    "\\ensuremath{\\land}",                   "");
-	("\\/",    "\\ensuremath{\\lor}" ,                   "");
+  ("~",      "\\ensuremath{\\lnot}",                   "");
+	("/\\\\",    "\\ensuremath{\\land}",                 "");
+	("\\\\/",    "\\ensuremath{\\lor}" ,                 "");
 	("|-",     "\\ensuremath{\\vdash}",                  "");
 	("forall", "\\ensuremath{\\forall}",                 "");
   ("exists", "\\ensuremath{\\exists}",                 "");] in
