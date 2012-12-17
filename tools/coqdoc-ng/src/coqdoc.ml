@@ -15,9 +15,24 @@ let initialize () =
     A Vdoc is a "glueing" document composed of two things: (i) fragments of
     documents written the initial input format ; (ii) requests to coqtop.
 *)
-let frontend () =
-  match Settings.input_type () with
-    | Settings.IVernac -> assert false (* FIXME: Not implemented yet. *)
+let cst_of_input =
+  (MenhirLib.Convert.Simplified.traditional2revised Parser.parse_vernac)
+
+let doc_from_string str =
+    (Parser.parse_doc Doc_lexer.lex_doc (Lexing.from_string str))
+
+let frontend () = match Settings.input_type () with
+    | Settings.IVernac ->
+        let vdoc_of_input inp =
+          let lst = ref [] in
+          try
+            while true do
+              let ret = cst_of_input (Vernac_lexer.lex (Settings.input_channel inp)) in
+              let cst = Cst.make_cst doc_from_string ret in
+              lst := cst::!lst;
+            done; assert false
+          with Cst.End_of_file -> (List.rev !lst) in
+      List.flatten (List.map vdoc_of_input (Settings.input_documents ()))
     | Settings.ICoqTeX -> assert false (* FIXME: Not implemented yet. *)
     | Settings.IHTML   -> assert false (* FIXME: Not implemented yet. *)
 
@@ -35,7 +50,8 @@ let resolve_coqtop_interaction inputs =
   (** Initialize a communication layer with a coqtop instance. *)
   let _ct = Coqtop.spawn [] in
   (** Resolve every requests from inputs. *)
-  assert false
+  List.map
+    (fun inp -> Evaluate.eval_cst _ct (Settings.input_type ()) inp) inputs
 
 (** The role of the backend is to produce the final set of documents.
 
@@ -55,5 +71,3 @@ let coqdoc =
   let inputs          = frontend () in
   let resolved_inputs = resolve_coqtop_interaction inputs in
   backend resolved_inputs
-
-

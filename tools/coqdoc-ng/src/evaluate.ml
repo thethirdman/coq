@@ -42,10 +42,10 @@ let initialize_code_rules =
 (** Does the translation from code to doc *)
 let handle_code ct i_type code =
   initialize_code_rules ct;
-  if i_type = Settings.IVernac then
+  if i_type = Settings.IVernac && code <> "" && code <> "\n" then
     (** We first evaluate the code in order to manage the identifiers *)
     begin
-      ignore (Coqtop.interp ct Coqtop.default_logger code);
+      ignore (Coqtop.interp ct Coqtop.null_logger code);
       if !(fst code_show) then
         Annotations.doc_of_vernac ct code
       else
@@ -95,9 +95,7 @@ and eval_full_doc cst =
   [elt] -> elt
   |_ -> `Content ""
 
-let eval_cst ct i_type cst =
-  let aux = function
+let eval_cst ct i_type = function
     Cst.Doc d -> eval_full_doc d
     | Cst.Code c -> handle_code ct i_type c
-    |_ -> `Content "" in
-  List.map aux cst
+    |_ -> `Content ""

@@ -23,6 +23,8 @@ struct
 (* Output file generation function: takes a default function
   * which will be called when Formatter.doc does not implement a rule
   * for a cst node *)
-let transform outc default_fun cst = assert false
-
+let transform outc default_fun cst =
+  match (Formatter.doc cst) with
+    None -> output_string outc (default_fun cst)
+    | Some s -> output_string outc s
 end

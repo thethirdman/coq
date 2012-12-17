@@ -5,8 +5,6 @@
 open Lexing
 open Parser
 
-module Vernac_lexer = struct
-
   exception Lexer_Error of string
 
   let reg = Str.regexp "\\((\\*\\*\\)\\|\\((\\*\\)\\|\\(\\*)\\)"
@@ -42,5 +40,3 @@ module Vernac_lexer = struct
             with End_of_file -> Queue.push EOF tokens end;
         (Queue.pop tokens, Lexing.dummy_pos, Lexing.dummy_pos)
     in aux
-
-end

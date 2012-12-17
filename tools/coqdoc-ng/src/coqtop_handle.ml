@@ -24,6 +24,8 @@ let default_logger lvl msg = match lvl with
   | Warning -> print_string ("Warning: " ^ msg ^ "\n")
   | Error   -> print_string ("Error: " ^ msg ^ "\n")
 
+let null_logger lvl msg = ignore lvl
+
 let open_process_pid prog args =
   let (ide2top_r,ide2top_w) = Unix.pipe () in
   let (top2ide_r,top2ide_w) = Unix.pipe () in

@@ -92,4 +92,7 @@ type 'a cst_node =
 type 'a cst = ('a cst_node) list
 
 (* Converts source and doc types into the common type cst *)
-let make_cst lst (doc_converter:string -> doc_with_eval) = assert false
+let make_cst (doc_converter:string -> doc_with_eval) = function
+  | Doc d -> Doc (doc_converter d)
+  | Comment s -> Comment s
+  | Code s -> Code s
