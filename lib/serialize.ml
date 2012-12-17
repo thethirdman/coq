@@ -594,6 +594,10 @@ let pr_value v = pr_value_gen (fun _ -> "") v
 let pr_string s = "["^s^"]"
 let pr_bool b = if b then "true" else "false"
 
+let pr_option_string = function
+  Some s -> pr_string s
+  | None -> ""
+
 let pr_status s =
   let path =
     let l = String.concat "." s.status_path in
@@ -652,6 +656,6 @@ let pr_full_value call value =
     | MkCases s -> pr_value_gen pr_mkcases (Obj.magic value : string list list value)
     | Quit -> pr_value value
     | About -> pr_value value
-    | Locate s -> pr_value_gen pr_string (Obj.magic value : string value)
+    | Locate s -> pr_value_gen pr_option_string (Obj.magic value : string option value)
     | Prettyprint _ -> pr_value value
 
