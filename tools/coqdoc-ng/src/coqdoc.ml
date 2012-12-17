@@ -66,10 +66,11 @@ let backend resolved_inputs =
   match Settings.output_type (Settings.output_document ()) with
   | Settings.OHTML ->
       let module Backend = Vdoc.Backend(Html) in
-      let print = Backend.transform
-        (Settings.output_channel (Settings.output_document ()))
-        (fun s -> "fixme") in
-      List.iter print resolved_inputs
+      let outc = Settings.output_channel (Settings.output_document ()) in
+      let print = Backend.transform outc (fun s -> "fixme") in
+      Backend.header outc;
+      List.iter print resolved_inputs;
+      Backend.footer outc
   | Settings.OLaTeX -> assert false
   | Settings.OPrettyPrint -> assert false
 

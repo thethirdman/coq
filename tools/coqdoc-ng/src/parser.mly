@@ -11,7 +11,7 @@
 
 %start parse_vernac parse_doc
 
-%type <string Cst.cst_node> parse_vernac
+%type <(string,string) Cst.cst_node> parse_vernac
 %type <Cst.doc_with_eval> parse_doc
 
 %{

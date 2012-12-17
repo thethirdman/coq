@@ -27,4 +27,7 @@ let transform outc default_fun cst =
   match (Formatter.doc cst) with
     None -> output_string outc (default_fun cst)
     | Some s -> output_string outc s
+
+let header outc = output_string outc (Formatter.header ())
+let footer outc = output_string outc (Formatter.footer ())
 end

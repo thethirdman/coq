@@ -83,10 +83,10 @@ let add_rule tag f =
   *)
 let rec doc_of_annot annot =
   match annot with
-       | AString s -> `Code [Cst.NoFormat s]
+       | AString s -> [Cst.NoFormat s]
        | ATag (node, values) ->
-           try (((Hashtbl.find code_rules node) values):Cst.doc_no_eval)
-           with Not_found -> `Seq (List.map doc_of_annot values)
+           try ((Hashtbl.find code_rules node) values)
+           with Not_found -> List.flatten (List.map doc_of_annot values)
 
 (** Utility: string -> Cst.code
   * This function is used when we want to distinguish simple strings
@@ -113,29 +113,29 @@ let _ =
     V_Proof; V_Assumption; V_Solve; V_EndProof; V_CheckMayEval;
     V_StartTheoremProof; C_CLetIn; C_CNotation; C_UnpTerminal; C_CProdN ] in
     let node_generic = (fun fallback args ->
-        `Seq (List.map
+        List.flatten (List.map
           (function
-            AString s -> `Code [maybe_symbol (fun e -> Cst.Keyword e) s]
+            AString s -> [maybe_symbol (fun e -> Cst.Keyword e) s]
             | ann -> doc_of_annot ann) args)) in
     List.iter (fun e -> add_rule e node_generic) keyword_nodes;
 
     (** Rules for identifiers *)
     let id_types = [C_Id; C_Ref] in
     let id_print = (fun fallback args -> match args with
-        | [AString id] -> (`Code [Cst.Ident id])
+        | [AString id] -> [Cst.Ident id]
       |_  -> fallback args) in
     List.iter (fun e -> add_rule e id_print) id_types;
 
       (** Rules for literals *)
     let lit_types = [C_CPrim; C_GlobSort] in
     let lit_rule = (fun fallback args -> match args with
-        | [AString lit] -> (`Code [Cst.Literal lit])
+        | [AString lit] -> [Cst.Literal lit]
         |_ -> fallback args) in
     List.iter (fun e -> add_rule e lit_rule) lit_types;
 
     (** Rule for tactics *)
     add_rule V_Solve (fun fallback args -> match args with
-      | [AString lit] -> `Code [Cst.Tactic lit]
+      | [AString lit] -> [Cst.Tactic lit]
       | _ -> fallback args);
 
   end
@@ -170,7 +170,7 @@ let add_printing_rule pr =
     (fun fallback args ->
       if (List.exists (fun e -> cmp_command e pr.match_element)
           args) then
-            `Output_command (pr.replace_with, extract_metavars args)
+            [Cst.Output_command (pr.replace_with, extract_metavars args)]
       else
           fallback args)
   (* Else, the printing rule is translated into a simple raw_command *)
@@ -178,7 +178,7 @@ let add_printing_rule pr =
     add_rule Xml_pp.C_UnpTerminal
     (fun fallback args -> match args with
       [AString s] when cmp_symbol s pr.match_element
-        -> `Raw (pr.replace_with)
+        -> [Cst.Output_command (pr.replace_with, [])]
       |_ -> fallback args)
 
 let rm_printing_rule match_elt =
@@ -219,6 +219,6 @@ let doc_of_vernac ct code =
   let ret =
     (try
       let annot_lst = annot_of_vernac ct code in
-        `Seq (List.map doc_of_annot annot_lst)
+        List.map doc_of_annot annot_lst
     with Invalid_argument s -> print_endline  s;
-        `Code [maybe_symbol (fun e -> Cst.NoFormat e) code]) in ret
+        [maybe_symbol (fun e -> Cst.NoFormat e) code]) in ret

@@ -26,5 +26,5 @@ type token =
   | ADD_PRINTING of (bool*string)
 
 
-val parse_vernac: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (string Cst.cst_node)
+val parse_vernac: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> ((string,string) Cst.cst_node)
 val parse_doc: (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (Cst.doc_with_eval)

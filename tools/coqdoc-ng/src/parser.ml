@@ -758,7 +758,7 @@ and _menhir_goto_list_CONTENT_ : _menhir_env -> 'ttv_tail -> _menhir_state -> 't
             ((let (_menhir_stack, _, _2) = _menhir_stack in
             let _v : (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 763 "parser.ml"
             ) = 
 # 45 "parser.mly"
@@ -790,7 +790,7 @@ and _menhir_goto_list_CONTENT_ : _menhir_env -> 'ttv_tail -> _menhir_state -> 't
             ((let (_menhir_stack, _, _2) = _menhir_stack in
             let _v : (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 795 "parser.ml"
             ) = 
 # 43 "parser.mly"
@@ -1496,7 +1496,7 @@ and _menhir_discard : _menhir_env -> token =
 
 and _menhir_goto_parse_vernac : _menhir_env -> 'ttv_tail -> (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 1501 "parser.ml"
 ) -> 'ttv_return =
   fun _menhir_env _menhir_stack _v ->
@@ -1504,14 +1504,14 @@ and _menhir_goto_parse_vernac : _menhir_env -> 'ttv_tail -> (
     let (_menhir_stack : 'freshtv29) = Obj.magic _menhir_stack in
     let (_v : (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 1509 "parser.ml"
     )) = _v in
     ((let (_menhir_env : _menhir_env) = _menhir_env in
     let (_menhir_stack : 'freshtv27) = Obj.magic _menhir_stack in
     let (_1 : (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 1516 "parser.ml"
     )) = _v in
     (Obj.magic _1 : 'freshtv28)) : 'freshtv30)
@@ -1580,7 +1580,7 @@ and parse_doc : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
 
 and parse_vernac : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 1585 "parser.ml"
 ) =
   fun lexer lexbuf ->
@@ -1610,7 +1610,7 @@ and parse_vernac : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
         )) = _v in
         ((let _v : (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 1615 "parser.ml"
         ) = 
 # 47 "parser.mly"
@@ -1625,7 +1625,7 @@ and parse_vernac : (Lexing.lexbuf -> token) -> Lexing.lexbuf -> (
         let (_menhir_stack : 'freshtv5) = Obj.magic _menhir_stack in
         ((let _v : (
 # 14 "parser.mly"
-      (string Cst.cst_node)
+      ((string,string) Cst.cst_node)
 # 1630 "parser.ml"
         ) = 
 # 49 "parser.mly"

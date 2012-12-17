@@ -13,6 +13,7 @@ type raw_content = { latex : string; latex_math : string; html : string;
 type code =  Keyword of string | Ident of string | Literal of string
             | Tactic of string
             | Symbol of string | NoFormat of string
+            | Output_command of raw_content * string list
 
 (** Describes a user-defined printing rule. This type handles both
  * printing and printing_command commands (differentiated with the
@@ -41,9 +42,8 @@ type flat_element =
    * The first element is the command to call; The second element is the list
    * of arguments given to this command. Each backend should implement its
    * way to output commands *)
-  | `Output_command of raw_content * string list
   (* Type for formatted code output: list of code elements *)
-  | `Code of code list ]
+  ]
 
 (** This type contains all the elements that will be evaluated.
  * They will disappear in the final document *)
@@ -81,12 +81,12 @@ type doc_no_eval = [flat_element | doc_no_eval rec_element]
 (** Type containing the full input file structure. After evaluation,
  * everything is translated into a do_no_eval type: comments are discarded
  * and code is translated into formatted documentation *)
-type 'a cst_node =
+type ('a,'b) cst_node =
   | Comment of string
   | Doc of 'a
-  | Code of string
+  | Code of 'b
 
-type 'a cst = ('a cst_node) list
+type ('a,'b) cst = (('a,'b) cst_node) list
 
 (* Converts source and doc types into the common type cst *)
 let make_cst (doc_converter:string -> doc_with_eval) = function

@@ -49,10 +49,10 @@ let handle_code ct i_type code =
       if !(fst code_show) then
         Annotations.doc_of_vernac ct code
       else
-        (`Content "")
+        ""
     end
   else
-    (`Content code)
+    code
 
 
 
@@ -91,7 +91,7 @@ and eval_full_doc cst =
 
 let eval_cst ct i_type = function
     Cst.Doc d -> eval_full_doc d
-    | Cst.Code c -> handle_code ct i_type c
+    | Cst.Code c -> Cst.Code (handle_code ct i_type c)
     (**FIXME: this is ugly, ideally there would be parser + lexer for comments
      * but ... flemme *)
     | Cst.Comment c -> let reg = Str.regexp
@@ -104,4 +104,4 @@ let eval_cst ct i_type = function
             | "end","show"
             | "end","hide"   -> (fst code_show) := (snd code_show)
             | (a,b) -> raise (Invalid_argument ("when treating " ^ a ^ " " ^ b))
-          end; `Content ""
+          end; Cst.Doc (`Content "")
