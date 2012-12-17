@@ -112,6 +112,15 @@ let load_input_document fname = try {
   (* FIXME: Use a standardize way of raising fatal errors. *)
   raise e
 
+let load_output_document fname =
+  try
+    print_endline "LOADING";
+    let doc = {document_type = OHTML (* FIXME *);
+               document_filename = Named fname;
+               document_channel = open_out fname;} in
+    io.output <- doc;
+  with (Sys_error _) as e -> raise e
+
 let load_input_document fname =
   io.input <- (load_input_document fname) :: io.input
 
@@ -132,7 +141,7 @@ let speclist = Arg.align [
   ("-h", Arg.Set print_help,
    " Print this help message and exit.");
 
-  ("-o", Arg.String (fun s -> io.output.document_filename <- Named s),
+  ("-o", Arg.String (fun s -> load_output_document s),
    " Specify output file. If unspecified, default output will be stdout.");
 
   ("--html", Arg.Unit (fun () -> io.output.document_type <- OHTML),

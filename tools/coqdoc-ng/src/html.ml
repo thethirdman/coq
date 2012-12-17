@@ -73,7 +73,7 @@ let doc cst =
     | #Cst.flat_element as c -> print_flat_element c
     | #Cst.rec_element as c -> print_rec_element c
     |_ -> raise Unhandled_case in
-    try Some (Str.global_replace (Str.regexp "\n") "<br/>" (print_no_eval cst)) with
+    try Some (Str.global_replace (Str.regexp "\n") "<br/>\n" (print_no_eval cst)) with
       Unhandled_case -> None
 
 (* FIXME: make real function *)
