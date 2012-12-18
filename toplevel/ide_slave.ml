@@ -298,7 +298,11 @@ let rec prettyprint s =
   let last_parse = snd (Loc.unloc loc) in
   let ret = Pp.string_of_ppcmds (Ppvernac.pr_vernac ast) in
   Xml_pp.enable_flat_pp ();
-  if last_parse < len then
+  (** FIXME: this is an ugly hack, because the xml_parser will remove
+   * some spaces when reading the message, those spaces are replaced by
+   * unbreakable html spaces *)
+  Str.global_replace (Str.regexp " ") "&nbsp;"
+  (if last_parse < len then
     (** If the string we obtain is not fully parsed, we
 	continue on the part of the string that was not
 	consumed by the parser. *)
@@ -309,7 +313,7 @@ let rec prettyprint s =
     ^ (try prettyprint (String.sub s (last_parse) (len - last_parse))
        with Vernac.End_of_input _ -> "")
   else
-    ret
+    ret)
 
 (** When receiving the Quit call, we don't directly do an [exit 0],
     but rather set this reference, in order to send a final answer

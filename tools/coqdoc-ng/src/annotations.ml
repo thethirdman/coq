@@ -40,9 +40,14 @@ let annot_of_vernac ct vernac_string =
   let xml_parser = Xml_parser.make (Xml_parser.SString ("<xml>" ^ pp_output ^ "</xml>")) in
   let xml_result = Xml_parser.parse xml_parser in
 
+  (** This is an ugly hack (part 2.). Because the xml_parser will remove
+   * some spaces, we escaped them before sending them through coqtop (see
+   * toplevel/ide_slave). We now unescape the spaces *)
+  let unescape = Str.global_replace (Str.regexp "&nbsp;") " " in
+
   (** Translates from xml to annot *)
   let rec translate = function
-    PCData s -> AString s
+    PCData s -> AString (unescape s)
     | Element (name, [], xml) -> (* We do not accept attributes *)
         ATag (Xml_pp.context_tag_of_string name, List.map translate xml)
     | Element (name,_,_) ->
@@ -191,7 +196,7 @@ let _ =
   let open Cst in
   let default_symbols = [
     (* default symbol, latex, html *)
-  ("*" ,     "\\ensuremath{\\times}",                  "");
+  ("\\*" ,     "\\ensuremath{\\times}",                  "");
 	("|",      "\\ensuremath{|}",                        "");
 	("->",     "\\ensuremath{\\rightarrow}",             "");
 	("->~",    "\\ensuremath{\\rightarrow\\lnot}",       "");

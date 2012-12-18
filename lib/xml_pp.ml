@@ -6,7 +6,7 @@ let enable_semistructured_pp () = semistructured := true
 
 let enable_flat_pp () = semistructured := false
 
-type context_tag = 
+type context_tag =
   | C_CNotation | C_Id | C_Ref | C_UnpMetaVar
   | C_UnpListMetaVar | C_UnpBinderListMetaVar | C_UnpTerminal
   | C_Name | C_GlobSort | C_CHole

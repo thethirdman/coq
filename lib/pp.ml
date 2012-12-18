@@ -471,7 +471,7 @@ let surround p = hov 1 (str"(" ++ p ++ str")")
    FIXME: new pp_cmd.
 *)
 let pr_tag t elt = 
-  let old_str s  = Stream.of_list [Ppcmd_print (utf8_length s,s)] in
+  let old_str s  = Stream.of_list [Ppcmd_print (0,s)] in
   let left_open  = old_str "<" 
   and right_open = old_str "</"
   and closing    = old_str ">" in
