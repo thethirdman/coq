@@ -117,7 +117,7 @@ type search_entry = stored_data list * stored_data list * Bounded_net.t
 let empty_se = ([],[],Bounded_net.create ())
 
 let eq_pri_auto_tactic (_, x) (_, y) =
-  if Int.equal x.pri y.pri && Option.Misc.compare constr_pattern_eq x.pat y.pat then
+  if Int.equal x.pri y.pri && Option.equal constr_pattern_eq x.pat y.pat then
     match x.code,y.code with
       | Res_pf(cstr,_),Res_pf(cstr1,_) -> 
 	   eq_constr cstr cstr1
@@ -152,7 +152,7 @@ let lookup_tacs (hdc,c) st (l,l',dn) =
 module Constr_map = Map.Make(RefOrdered)
 
 let is_transparent_gr (ids, csts) = function
-  | VarRef id -> Idpred.mem id ids
+  | VarRef id -> Id.Pred.mem id ids
   | ConstRef cst -> Cpred.mem cst csts
   | IndRef _ | ConstructRef _ -> false
 
@@ -308,7 +308,7 @@ module Hint_db = struct
   type t = {
     hintdb_state : Names.transparent_state;
     hintdb_cut : hints_path;
-    hintdb_unfolds : Idset.t * Cset.t;
+    hintdb_unfolds : Id.Set.t * Cset.t;
     mutable hintdb_max_id : int;
     use_dn : bool;
     hintdb_map : search_entry Constr_map.t;
@@ -322,7 +322,7 @@ module Hint_db = struct
 
   let empty st use_dn = { hintdb_state = st;
 			  hintdb_cut = PathEmpty;
-			  hintdb_unfolds = (Idset.empty, Cset.empty);
+			  hintdb_unfolds = (Id.Set.empty, Cset.empty);
 			  hintdb_max_id = 0;
 			  use_dn = use_dn;
 			  hintdb_map = Constr_map.empty;
@@ -384,7 +384,7 @@ module Hint_db = struct
       | Unfold_nth egr ->
 	  let addunf (ids,csts) (ids',csts') =
 	    match egr with
-	    | EvalVarRef id -> (Idpred.add id ids, csts), (Idset.add id ids', csts')
+	    | EvalVarRef id -> (Id.Pred.add id ids, csts), (Id.Set.add id ids', csts')
 	    | EvalConstRef cst -> (ids, Cpred.add cst csts), (ids', Cset.add cst csts')
 	  in 
 	  let state, unfs = addunf db.hintdb_state db.hintdb_unfolds in
@@ -574,10 +574,10 @@ let make_extern pri pat tacast =
    { pri = pri;
      pat = pat;
      name = PathAny;
-     code = Extern tacast })
+     code = Extern tacast })  
 
 let make_trivial env sigma ?(name=PathAny) r =
-  let c = constr_of_global r in
+  let c = constr_of_global_or_constr r in
   let t = hnf_constr env sigma (type_of env sigma c) in
   let hd = head_of_constr_reference (fst (head_constr t)) in
   let ce = mk_clenv_from dummy_goal (c,t) in
@@ -611,7 +611,7 @@ let add_transparency dbname grs b =
     List.fold_left (fun (ids, csts) gr ->
       match gr with
       | EvalConstRef c -> (ids, (if b then Cpred.add else Cpred.remove) c csts)
-      | EvalVarRef v -> (if b then Idpred.add else Idpred.remove) v ids, csts)
+      | EvalVarRef v -> (if b then Id.Pred.add else Id.Pred.remove) v ids, csts)
       st grs
   in searchtable_add (dbname, Hint_db.set_transparent_state db st')
 
@@ -726,6 +726,8 @@ let remove_hints local dbnames grs =
 	 Lib.add_anonymous_leaf (inAutoHint(local, dbname, RemoveHints grs)))
       dbnames
 
+open Misctypes
+
 (**************************************************************************)
 (*                     The "Hint" vernacular command                      *)
 (**************************************************************************)
@@ -736,8 +738,12 @@ let add_resolves env sigma clist local dbnames =
 	 (inAutoHint
 	    (local,dbname, AddHints
      	      (List.flatten (List.map (fun (x, hnf, path, gr) ->
-		make_resolves env sigma (true,hnf,Flags.is_verbose()) x ~name:path 
-		  (constr_of_global gr)) clist)))))
+	        let c = 
+		  match gr with
+		  | IsConstr c -> c
+		  | IsGlobal gr -> constr_of_global gr
+		in
+		  make_resolves env sigma (true,hnf,Flags.is_verbose()) x ~name:path c) clist)))))
     dbnames
 
 let add_unfolds l local dbnames =
@@ -792,15 +798,15 @@ let forward_intern_tac =
 let set_extern_intern_tac f = forward_intern_tac := f
 
 type hints_entry =
-  | HintsResolveEntry of (int option * bool * hints_path_atom * global_reference) list
-  | HintsImmediateEntry of (hints_path_atom * global_reference) list
+  | HintsResolveEntry of (int option * bool * hints_path_atom * global_reference_or_constr) list
+  | HintsImmediateEntry of (hints_path_atom * global_reference_or_constr) list
   | HintsCutEntry of hints_path
   | HintsUnfoldEntry of evaluable_global_reference list
   | HintsTransparencyEntry of evaluable_global_reference list * bool
   | HintsExternEntry of
       int * (patvar list * constr_pattern) option * glob_tactic_expr
 
-let h = id_of_string "H"
+let h = Id.of_string "H"
 
 exception Found of constr * types
 
@@ -817,7 +823,7 @@ let prepare_hint env (sigma,c) =
       (* We skip the test whether args is the identity or not *)
       let t = Evarutil.nf_evar sigma (existential_type sigma ev) in
       let t = List.fold_right (fun (e,id) c -> replace_term e id c) !subst t in
-      if not (Intset.is_empty (free_rels t)) then
+      if not (Int.Set.is_empty (free_rels t)) then
 	error "Hints with holes dependent on a bound variable not supported.";
       if occur_existential t then
 	(* Not clever enough to construct dependency graph of evars *)
@@ -827,14 +833,13 @@ let prepare_hint env (sigma,c) =
   let rec iter c =
     try find_next_evar c; c
     with Found (evar,t) ->
-      let id = next_ident_away_from h (fun id -> Idset.mem id !vars) in
-      vars := Idset.add id !vars;
+      let id = next_ident_away_from h (fun id -> Id.Set.mem id !vars) in
+      vars := Id.Set.add id !vars;
       subst := (evar,mkVar id)::!subst;
       mkNamedLambda id t (iter (replace_term evar (mkVar id) c)) in
   iter c
 
 let interp_hints =
-  let hint_counter = ref 1 in
   fun h ->
   let f c =
     let evd,c = Constrintern.interp_open_constr Evd.empty (Global.env()) c in
@@ -850,15 +855,8 @@ let interp_hints =
     match c with
     | HintsReference c ->
       let gr = global_with_alias c in
-	(PathHints [gr], gr)
-    | HintsConstr c ->
-      let term = f c in
-      let id = id_of_string ("auto_hint_" ^ string_of_int !hint_counter) in
-	incr hint_counter;
-      let kn = Declare.declare_definition ~internal:Declare.KernelSilent
-	~opaque:false id term in
-      let gr = ConstRef kn in
-	(PathHints [gr], gr)
+	(PathHints [gr], IsGlobal gr)
+    | HintsConstr c -> (PathAny, IsConstr (f c))
   in
   let fres (o, b, c) =
     let path, gr = fi c in
@@ -877,7 +875,7 @@ let interp_hints =
 	Dumpglob.dump_reference (fst (qualid_of_reference qid)) "<>" (string_of_reference qid) "ind";
         List.tabulate (fun i -> let c = (ind,i+1) in
 				let gr = ConstructRef c in
-			 None, true, PathHints [gr], gr)
+			 None, true, PathHints [gr], IsGlobal gr)
 	  (nconstructors ind) in
 	HintsResolveEntry (List.flatten (List.map constr_hints_of_ind lqid))
   | HintsExtern (pri, patcom, tacexp) ->
@@ -1037,6 +1035,7 @@ let auto_unif_flags = {
   use_metas_eagerly_in_conv_on_closed_terms = false;
   modulo_delta = empty_transparent_state;
   modulo_delta_types = full_transparent_state;
+  modulo_delta_in_merge = None;
   check_applied_meta_types = false;
   resolve_evars = true;
   use_pattern_unification = false;
@@ -1314,7 +1313,7 @@ and my_find_search_delta db_list local_db hdc concl =
 	    let l =
 	      match hdc with None -> Hint_db.map_none db
 	      | Some hdc ->
-		  if (Idpred.is_empty ids && Cpred.is_empty csts)
+		  if (Id.Pred.is_empty ids && Cpred.is_empty csts)
 		  then Hint_db.map_auto (hdc,concl) db
 		  else Hint_db.map_all hdc db
 	    in {flags with modulo_delta = st}, l

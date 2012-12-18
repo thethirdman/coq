@@ -188,32 +188,6 @@ let qstring s = str ("\""^escape_string s^"\"")
 let qs = qstring
 let quote s = h 0 (str "\"" ++ s ++ str "\"")
 
-let stream_map f s =
-  Stream.of_list (List.map f (Stream.npeek max_int s))
-
-let rec xmlescape ppcmd =
-  let rec escape what withwhat (len, str) =
-    try
-      let pos = String.index str what in
-      let (tlen, tail) =
-        escape what withwhat ((len - pos - 1),
-          (String.sub str (pos + 1) (len - pos - 1)))
-      in
-      (pos + tlen + String.length withwhat, String.sub str 0 pos ^ withwhat ^ tail)
-    with Not_found -> (len, str)
-  in
-  match ppcmd with
-    | Ppcmd_print (len, str) ->
-        Ppcmd_print (escape '"' "&quot;"
-          (escape '>' "&gt;" (escape '<' "&lt;" (escape '&' "&amp;" (len,
-          str)))))
-      (* In XML we always print whole content so we can npeek the whole stream *)
-    | Ppcmd_box (x, str) ->
-      Ppcmd_box (x, stream_map xmlescape str)
-    | x -> x
-
-let xmlescape = stream_map xmlescape
-
 (* This flag tells if the last printed comment ends with a newline, to
   avoid empty lines *)
 let com_eol = ref false
@@ -470,16 +444,23 @@ let surround p = hov 1 (str"(" ++ p ++ str")")
    FIXME: We may have to consider implementing tags using a 
    FIXME: new pp_cmd.
 *)
+
 let pr_tag t elt = 
   let old_str s  = Stream.of_list [Ppcmd_print (0,s)] in
   let left_open  = old_str "<" 
   and right_open = old_str "</"
   and closing    = old_str ">" in
-  left_open ++ str t ++ closing 
+  left_open ++ old_str t ++ closing 
   ++ elt 
-  ++ right_open ++ str t ++ closing
+  ++ right_open ++ old_str t ++ closing
 
-let str s = if Xml_pp.is_semistructured_pp () then xmlescape (str s) else str s
+let str s =
+  if Xml_pp.is_semistructured_pp () then
+    let len = String.length s in
+    let new_string = Xml_utils.to_string (Serialize.PCData s) in
+    Stream.of_list [Ppcmd_print (len, new_string)]
+  else str s
+
 let qstring s = str ("\""^escape_string s^"\"")
 let qs = qstring
 

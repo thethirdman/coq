@@ -24,7 +24,7 @@ open Common
 (*s Some utility functions. *)
 
 let pp_tvar id =
-  let s = string_of_id id in
+  let s = Id.to_string id in
   if String.length s < 2 || s.[1]<>'\''
   then str ("'"^s)
   else str ("' "^s)
@@ -48,7 +48,7 @@ let pp_letin pat def body =
 (*s Ocaml renaming issues. *)
 
 let keywords =
-  List.fold_right (fun s -> Idset.add (id_of_string s))
+  List.fold_right (fun s -> Id.Set.add (Id.of_string s))
   [ "and"; "as"; "assert"; "begin"; "class"; "constraint"; "do";
     "done"; "downto"; "else"; "end"; "exception"; "external"; "false";
     "for"; "fun"; "function"; "functor"; "if"; "in"; "include";
@@ -57,7 +57,7 @@ let keywords =
     "parser"; "private"; "rec"; "sig"; "struct"; "then"; "to"; "true";
     "try"; "type"; "val"; "virtual"; "when"; "while"; "with"; "mod";
     "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr" ; "unit" ; "_" ; "__" ]
-  Idset.empty
+  Id.Set.empty
 
 let pp_open mp = str ("open "^ string_of_modfile mp ^"\n")
 
@@ -650,7 +650,7 @@ and pp_module_type params = function
       let mp_w =
 	List.fold_left (fun mp l -> MPdot(mp,label_of_id l)) mp_mt idl'
       in
-      let r = ConstRef (make_con mp_w empty_dirpath (label_of_id l)) in
+      let r = ConstRef (make_con mp_w Dir_path.empty (label_of_id l)) in
       push_visible mp_mt [];
       let pp_w = str " with type " ++ ids ++ pp_global Type r in
       pop_visible();

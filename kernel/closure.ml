@@ -65,10 +65,10 @@ let with_stats c =
   end else
     Lazy.force c
 
-let all_opaque = (Idpred.empty, Cpred.empty)
-let all_transparent = (Idpred.full, Cpred.full)
+let all_opaque = (Id.Pred.empty, Cpred.empty)
+let all_transparent = (Id.Pred.full, Cpred.full)
 
-let is_transparent_variable (ids, _) id = Idpred.mem id ids
+let is_transparent_variable (ids, _) id = Id.Pred.mem id ids
 let is_transparent_constant (_, csts) cst = Cpred.mem cst csts
 
 module type RedFlagsSig = sig
@@ -80,7 +80,7 @@ module type RedFlagsSig = sig
   val fIOTA : red_kind
   val fZETA : red_kind
   val fCONST : constant -> red_kind
-  val fVAR : identifier -> red_kind
+  val fVAR : Id.t -> red_kind
   val no_red : reds
   val red_add : reds -> red_kind -> reds
   val red_sub : reds -> red_kind -> reds
@@ -104,7 +104,7 @@ module RedFlags = (struct
     r_iota : bool }
 
   type red_kind = BETA | DELTA | ETA | IOTA | ZETA
-	      | CONST of constant | VAR of identifier
+	      | CONST of constant | VAR of Id.t
   let fBETA = BETA
   let fDELTA = DELTA
   let fETA = ETA
@@ -131,7 +131,7 @@ module RedFlags = (struct
     | ZETA -> { red with r_zeta = true }
     | VAR id ->
 	let (l1,l2) = red.r_const in
-	{ red with r_const = Idpred.add id l1, l2 }
+	{ red with r_const = Id.Pred.add id l1, l2 }
 
   let red_sub red = function
     | BETA -> { red with r_beta = false }
@@ -144,7 +144,7 @@ module RedFlags = (struct
     | ZETA -> { red with r_zeta = false }
     | VAR id ->
 	let (l1,l2) = red.r_const in
-	{ red with r_const = Idpred.remove id l1, l2 }
+	{ red with r_const = Id.Pred.remove id l1, l2 }
 
   let red_add_transparent red tr =
     { red with r_const = tr }
@@ -160,7 +160,7 @@ module RedFlags = (struct
 	incr_cnt c delta
     | VAR id -> (* En attendant d'avoir des kn pour les Var *)
 	let (l,_) = red.r_const in
-	let c = Idpred.mem id l in
+	let c = Id.Pred.mem id l in
 	incr_cnt c delta
     | ZETA -> incr_cnt red.r_zeta zeta
     | IOTA -> incr_cnt red.r_iota iota
@@ -194,8 +194,8 @@ let unfold_red kn =
  *  * i_repr is the function to get the representation from the current
  *         state of the cache and the body of the constant. The result
  *         is stored in the table.
- *  * i_rels = (4,[(1,c);(3,d)]) means there are 4 free rel variables
- *    and only those with index 1 and 3 have bodies which are c and d resp.
+ *  * i_rels is the array of free rel variables together with their optional
+ *    body
  *  * i_vars is the list of _defined_ named variables.
  *
  * ref_value_cache searchs in the tab, otherwise uses i_repr to
@@ -224,8 +224,8 @@ type 'a infos = {
   i_repr : 'a infos -> constr -> 'a;
   i_env : env;
   i_sigma : existential -> constr option;
-  i_rels : int * (int * constr) list;
-  i_vars : (identifier * constr) list;
+  i_rels : constr option array;
+  i_vars : (Id.t * constr) list;
   i_tab : 'a KeyTable.t }
 
 let info_flags info = info.i_flags
@@ -238,7 +238,13 @@ let ref_value_cache info ref =
     let body =
       match ref with
 	| RelKey n ->
-	    let (s,l) = info.i_rels in lift n (List.assoc (s-n) l)
+            let len = Array.length info.i_rels in
+            let i = n - 1 in
+            let () = if i < 0 || len <= i then raise Not_found in
+            begin match Array.unsafe_get info.i_rels i with
+            | None -> raise Not_found
+            | Some t -> lift n t
+            end
 	| VarKey id -> List.assoc id info.i_vars
 	| ConstKey cst -> constant_value info.i_env cst
     in
@@ -265,12 +271,15 @@ let defined_vars flags env =
 
 let defined_rels flags env =
 (*  if red_local_const (snd flags) then*)
-  Sign.fold_rel_context
-      (fun (id,b,t) (i,subs) ->
-	 match b with
-	   | None -> (i+1, subs)
-	   | Some body -> (i+1, (i,body) :: subs))
-      (rel_context env) ~init:(0,[])
+  let ctx = rel_context env in
+  let len = List.length ctx in
+  let ans = Array.make len None in
+  let iter i (_, b, _) = match b with
+  | None -> ()
+  | Some _ -> Array.unsafe_set ans i b
+  in
+  let () = List.iteri iter ctx in
+  ans
 (*  else (0,[])*)
 
 let create mk_cl flgs env evars =
@@ -650,7 +659,7 @@ let rec to_constr constr_fun lfts v =
         let fr = mk_clos2 env t in
         let unfv = update v (fr.norm,fr.term) in
         to_constr constr_fun lfts unfv
-    | FLOCKED -> assert false (*mkVar(id_of_string"_LOCK_")*)
+    | FLOCKED -> assert false (*mkVar(Id.of_string"_LOCK_")*)
 
 (* This function defines the correspondance between constr and
    fconstr. When we find a closure whose substitution is the identity,

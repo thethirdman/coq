@@ -299,8 +299,7 @@ let string_of_context_tag = function
   | V_Bullet -> "bullet"
 
 let tag_with_context pp_tag context elt =
-  if not !semistructured then 
+  if not !semistructured then
     elt
   else
     pp_tag (string_of_context_tag context) elt
-

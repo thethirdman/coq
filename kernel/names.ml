@@ -22,57 +22,86 @@ open Pp
 open Errors
 open Util
 
-let hcons_string = Hashcons.simple_hcons Hashcons.Hstring.generate ()
-
 (** {6 Identifiers } *)
 
-type identifier = string
+module Id =
+struct
+  type t = string
 
-let check_ident_soft x =
-  Option.iter (fun (fatal,x) ->
-      if fatal then error x else Pp.msg_warning (str x))
-    (Unicode.ident_refutation x)
-let check_ident x =
-  Option.iter (fun (_,x) -> Errors.error x) (Unicode.ident_refutation x)
+  let equal = String.equal
 
-let id_of_string s =
-  let () = check_ident_soft s in
-  let s = String.copy s in
-  hcons_string s
+  let compare = String.compare
 
-let string_of_id id = String.copy id
+  let check_soft x =
+    let iter (fatal, x) =
+      if fatal then error x else Pp.msg_warning (str x)
+    in
+    Option.iter iter (Unicode.ident_refutation x)
 
-let id_ord = String.compare
+  let check x =
+    let iter (_, x) = Errors.error x in
+    Option.iter iter (Unicode.ident_refutation x)
 
-let id_eq = String.equal
+  let of_string s =
+    let () = check_soft s in
+    let s = String.copy s in
+    String.hcons s
 
-module IdOrdered =
+  let to_string id = String.copy id
+
+  module Self =
   struct
-    type t = identifier
-    let compare = id_ord
+    type t = string
+    let compare = compare
   end
 
-module Idset = Set.Make(IdOrdered)
-module Idmap =
-struct
-  include Map.Make(IdOrdered)
-  exception Finded
-  let exists f m =
-    try iter (fun a b -> if f a b then raise Finded) m ; false
-    with |Finded -> true
-  let singleton k v = add k v empty
+  module Set = Set.Make(Self)
+  module Map =
+  struct
+    include Map.Make(Self)
+    exception Finded
+    let exists f m =
+      try iter (fun a b -> if f a b then raise Finded) m ; false
+      with Finded -> true
+    let singleton k v = add k v empty
+  end
+
+  module Pred = Predicate.Make(Self)
+
+  let hcons = String.hcons
+
 end
-module Idpred = Predicate.Make(IdOrdered)
+
+(** Backward compatibility for [Id.t] *)
+
+type identifier = Id.t
+
+let id_eq = Id.equal
+let id_ord = Id.compare
+let check_ident_soft = Id.check_soft
+let check_ident = Id.check
+let string_of_id = Id.to_string
+let id_of_string = Id.of_string
+
+module Idset = Id.Set
+module Idmap = Id.Map
+module Idpred = Id.Pred
+
+(** / End of backward compatibility *)
 
 (** {6 Various types based on identifiers } *)
 
-type name = Name of identifier | Anonymous
-type variable = identifier
+type name = Name of Id.t | Anonymous
+type variable = Id.t
 
 let name_eq n1 n2 = match n1, n2 with
 | Anonymous, Anonymous -> true
 | Name id1, Name id2 -> String.equal id1 id2
 | _ -> false
+
+type module_ident = Id.t
+
+module ModIdmap = Idmap
 
 (** {6 Directory paths = section names paths } *)
 
@@ -80,40 +109,77 @@ let name_eq n1 n2 = match n1, n2 with
     The actual representation is reversed to optimise sharing:
     Coq.A.B is ["B";"A";"Coq"] *)
 
-type module_ident = identifier
-type dir_path = module_ident list
+let default_module_name = "If you see this, it's a bug"
 
-module ModIdmap = Idmap
+module Dir_path =
+struct
+  type t = module_ident list
 
-let rec dir_path_ord (p1 : dir_path) (p2 : dir_path) =
-  if p1 == p2 then 0
-  else begin match p1, p2 with
-  | [], [] -> 0
-  | [], _ -> -1
-  | _, [] -> 1
-  | id1 :: p1, id2 :: p2 ->
-    let c = id_ord id1 id2 in
-    if Int.equal c 0 then dir_path_ord p1 p2 else c
-  end
+  let rec compare (p1 : t) (p2 : t) =
+    if p1 == p2 then 0
+    else begin match p1, p2 with
+    | [], [] -> 0
+    | [], _ -> -1
+    | _, [] -> 1
+    | id1 :: p1, id2 :: p2 ->
+      let c = Id.compare id1 id2 in
+      if Int.equal c 0 then compare p1 p2 else c
+    end
 
-let dir_path_eq p1 p2 = Int.equal (dir_path_ord p1 p2) 0
+  let equal p1 p2 = Int.equal (compare p1 p2) 0
 
-let make_dirpath x = x
-let repr_dirpath x = x
+  let make x = x
+  let repr x = x
 
-let empty_dirpath = []
-let is_empty_dirpath d = match d with [] -> true | _ -> false
+  let empty = []
 
-(** Printing of directory paths as ["coq_root.module.submodule"] *)
+  let is_empty d = match d with [] -> true | _ -> false
 
-let string_of_dirpath = function
-  | [] -> "<>"
-  | sl -> String.concat "." (List.rev_map string_of_id sl)
+  let to_string = function
+    | [] -> "<>"
+    | sl -> String.concat "." (List.rev_map Id.to_string sl)
+
+  let initial = [default_module_name]
+
+  module Self_Hashcons =
+    struct
+      type t_ = t
+      type t = t_
+      type u = Id.t -> Id.t
+      let hashcons hident d = List.smartmap hident d
+      let rec equal d1 d2 =
+        d1 == d2 ||
+        match (d1, d2) with
+        | [], [] -> true
+        | id1 :: d1, id2 :: d2 -> id1 == id2 && equal d1 d2
+        | _ -> false
+      let hash = Hashtbl.hash
+    end
+
+  module Hdir = Hashcons.Make(Self_Hashcons)
+
+  let hcons = Hashcons.simple_hcons Hdir.generate Id.hcons
+
+end
+
+(** Compatibility layer for [Dir_path] *)
+
+type dir_path = Dir_path.t
+let dir_path_ord = Dir_path.compare
+let dir_path_eq = Dir_path.equal
+let make_dirpath = Dir_path.make
+let repr_dirpath = Dir_path.repr
+let empty_dirpath = Dir_path.empty
+let is_empty_dirpath = Dir_path.is_empty
+let string_of_dirpath = Dir_path.to_string
+let initial_dir = Dir_path.initial
+
+(** / End of compatibility layer for [Dir_path] *)
 
 (** {6 Unique names for bound modules } *)
 
 let u_number = ref 0
-type uniq_ident = int * identifier * dir_path
+type uniq_ident = int * Id.t * Dir_path.t
 let make_uid dir s = incr u_number;(!u_number,s,dir)
  let debug_string_of_uid (i,s,p) =
  "<"(*^string_of_dirpath p ^"#"^*) ^ s ^"#"^ string_of_int i^">"
@@ -127,10 +193,10 @@ let uniq_ident_ord (x : uniq_ident) (y : uniq_ident) =
     let ans = Int.compare nl nr in
     if not (Int.equal ans 0) then ans
     else
-      let ans = id_ord idl idr in
+      let ans = Id.compare idl idr in
       if not (Int.equal ans 0) then ans
       else
-        dir_path_ord dpl dpr
+        Dir_path.compare dpl dpr
 
 module UOrdered =
 struct
@@ -151,7 +217,7 @@ let id_of_mbid (_,s,_) = s
 
 (** {6 Names of structure elements } *)
 
-type label = identifier
+type label = Id.t
 
 let mk_label = id_of_string
 let string_of_label = string_of_id
@@ -166,7 +232,7 @@ module Labmap = Idmap
 (** {6 The module part of the kernel name } *)
 
 type module_path =
-  | MPfile of dir_path
+  | MPfile of Dir_path.t
   | MPbound of mod_bound_id
   | MPdot of module_path * label
 
@@ -185,7 +251,7 @@ let rec mp_ord mp1 mp2 =
   if mp1 == mp2 then 0
   else match (mp1, mp2) with
   | MPfile p1, MPfile p2 ->
-    dir_path_ord p1 p2
+    Dir_path.compare p1 p2
   | MPbound id1, MPbound id2 ->
     uniq_ident_ord id1 id2
   | MPdot (mp1, l1), MPdot (mp2, l2) ->
@@ -207,14 +273,11 @@ end
 module MPset = Set.Make(MPord)
 module MPmap = Map.Make(MPord)
 
-let default_module_name = "If you see this, it's a bug"
-
-let initial_dir = make_dirpath [default_module_name]
-let initial_path = MPfile initial_dir
+let initial_path = MPfile Dir_path.initial
 
 (** {6 Kernel names } *)
 
-type kernel_name = module_path * dir_path * label
+type kernel_name = module_path * Dir_path.t * label
 
 let make_kn mp dir l = (mp,dir,l)
 let repr_kn kn = kn
@@ -242,7 +305,7 @@ let kn_ord (kn1 : kernel_name) (kn2 : kernel_name) =
     let c = String.compare l1 l2 in
       if not (Int.equal c 0) then c
       else
-        let c = dir_path_ord dir1 dir2 in
+        let c = Dir_path.compare dir1 dir2 in
         if not (Int.equal c 0) then c
         else MPord.compare mp1 mp2
 
@@ -391,12 +454,12 @@ module Constrmap_env = Map.Make(ConstructorOrdered_env)
 
 (* Better to have it here that in closure, since used in grammar.cma *)
 type evaluable_global_reference =
-  | EvalVarRef of identifier
+  | EvalVarRef of Id.t
   | EvalConstRef of constant
 
 let eq_egr e1 e2 = match e1, e2 with
     EvalConstRef con1, EvalConstRef con2 -> eq_constant con1 con2
-  | EvalVarRef id1, EvalVarRef id2 -> Int.equal (id_ord id1 id2) 0
+  | EvalVarRef id1, EvalVarRef id2 -> Int.equal (Id.compare id1 id2) 0
   | _, _ -> false
 
 (** {6 Hash-consing of name objects } *)
@@ -404,7 +467,7 @@ let eq_egr e1 e2 = match e1, e2 with
 module Hname = Hashcons.Make(
   struct
     type t = name
-    type u = identifier -> identifier
+    type u = Id.t -> Id.t
     let hashcons hident = function
       | Name id -> Name (hident id)
       | n -> n
@@ -417,24 +480,10 @@ module Hname = Hashcons.Make(
     let hash = Hashtbl.hash
   end)
 
-module Hdir = Hashcons.Make(
-  struct
-    type t = dir_path
-    type u = identifier -> identifier
-    let hashcons hident d = List.smartmap hident d
-    let rec equal d1 d2 =
-      (d1==d2) ||
-      match (d1,d2) with
-      | [],[] -> true
-      | id1::d1,id2::d2 -> id1 == id2 & equal d1 d2
-      | _ -> false
-    let hash = Hashtbl.hash
-  end)
-
 module Huniqid = Hashcons.Make(
   struct
     type t = uniq_ident
-    type u = (identifier -> identifier) * (dir_path -> dir_path)
+    type u = (Id.t -> Id.t) * (Dir_path.t -> Dir_path.t)
     let hashcons (hid,hdir) (n,s,dir) = (n,hid s,hdir dir)
     let equal ((n1,s1,dir1) as x) ((n2,s2,dir2) as y) =
       (x == y) ||
@@ -445,7 +494,7 @@ module Huniqid = Hashcons.Make(
 module Hmod = Hashcons.Make(
   struct
     type t = module_path
-    type u = (dir_path -> dir_path) * (uniq_ident -> uniq_ident) *
+    type u = (Dir_path.t -> Dir_path.t) * (uniq_ident -> uniq_ident) *
 	(string -> string)
     let rec hashcons (hdir,huniqid,hstr as hfuns) = function
       | MPfile dir -> MPfile (hdir dir)
@@ -465,7 +514,7 @@ module Hkn = Hashcons.Make(
   struct
     type t = kernel_name
     type u = (module_path -> module_path)
-	* (dir_path -> dir_path) * (string -> string)
+	* (Dir_path.t -> Dir_path.t) * (string -> string)
     let hashcons (hmod,hdir,hstr) (md,dir,l) =
       (hmod md, hdir dir, hstr l)
     let equal (mod1,dir1,l1) (mod2,dir2,l2) =
@@ -504,13 +553,11 @@ module Hconstruct = Hashcons.Make(
     let hash = Hashtbl.hash
   end)
 
-let hcons_ident = hcons_string
-let hcons_name = Hashcons.simple_hcons Hname.generate hcons_ident
-let hcons_dirpath = Hashcons.simple_hcons Hdir.generate hcons_ident
-let hcons_uid = Hashcons.simple_hcons Huniqid.generate (hcons_ident,hcons_dirpath)
+let hcons_name = Hashcons.simple_hcons Hname.generate Id.hcons
+let hcons_uid = Hashcons.simple_hcons Huniqid.generate (Id.hcons,Dir_path.hcons)
 let hcons_mp =
-  Hashcons.simple_hcons Hmod.generate (hcons_dirpath,hcons_uid,hcons_string)
-let hcons_kn = Hashcons.simple_hcons Hkn.generate (hcons_mp,hcons_dirpath,hcons_string)
+  Hashcons.simple_hcons Hmod.generate (Dir_path.hcons,hcons_uid,String.hcons)
+let hcons_kn = Hashcons.simple_hcons Hkn.generate (hcons_mp,Dir_path.hcons,String.hcons)
 let hcons_con = Hashcons.simple_hcons Hcn.generate hcons_kn
 let hcons_mind = Hashcons.simple_hcons Hcn.generate hcons_kn
 let hcons_ind = Hashcons.simple_hcons Hind.generate hcons_mind
@@ -528,7 +575,7 @@ let cst_full_transparent_state = (Idpred.empty, Cpred.full)
 
 type 'a tableKey =
   | ConstKey of constant
-  | VarKey of identifier
+  | VarKey of Id.t
   | RelKey of 'a
 
 
@@ -546,7 +593,7 @@ let eq_id_key ik1 ik2 =
     if ans then Int.equal (kn_ord kn1 kn2) 0
     else ans
   | VarKey id1, VarKey id2 ->
-    Int.equal (id_ord id1 id2) 0
+    Int.equal (Id.compare id1 id2) 0
   | RelKey k1, RelKey k2 -> Int.equal k1 k2
   | _ -> false
 

@@ -261,7 +261,7 @@ let parse_format ((loc, str) : lstring) =
     else push_white n [[]]
   in
   try
-    if not (String.equal str "") then match parse_token 0 with
+    if not (String.is_empty str) then match parse_token 0 with
       | [l] -> l
       | _ -> error "Box closed without being opened in format."
     else
@@ -324,7 +324,7 @@ let rec find_pattern nt xl = function
 
 let rec interp_list_parser hd = function
   | [] -> [], List.rev hd
-  | NonTerminal id :: tl when id_eq id ldots_var ->
+  | NonTerminal id :: tl when Id.equal id ldots_var ->
       let hd = List.rev hd in
       let ((x,y,sl),tl') = find_pattern (List.hd hd) [] (List.tl hd,tl) in
       let xyl,tl'' = interp_list_parser [] tl' in
@@ -357,7 +357,7 @@ let rec raw_analyze_notation_tokens = function
   | String ".." :: sl -> NonTerminal ldots_var :: raw_analyze_notation_tokens sl
   | String "_" :: _ -> error "_ must be quoted."
   | String x :: sl when Lexer.is_ident x ->
-      NonTerminal (Names.id_of_string x) :: raw_analyze_notation_tokens sl
+      NonTerminal (Names.Id.of_string x) :: raw_analyze_notation_tokens sl
   | String s :: sl ->
       Terminal (String.drop_simple_quotes s) :: raw_analyze_notation_tokens sl
   | WhiteSpace n :: sl ->
@@ -374,9 +374,9 @@ let rec get_notation_vars = function
   | [] -> []
   | NonTerminal id :: sl ->
       let vars = get_notation_vars sl in
-      if id_eq id ldots_var then vars else
+      if Id.equal id ldots_var then vars else
 	if List.mem id vars then
-	  error ("Variable "^string_of_id id^" occurs more than once.")
+	  error ("Variable "^Id.to_string id^" occurs more than once.")
 	else
           id::vars
   | (Terminal _ | Break _) :: sl -> get_notation_vars sl
@@ -389,7 +389,7 @@ let analyze_notation_tokens l =
   recvars, List.subtract vars (List.map snd recvars), l
 
 let error_not_same_scope x y =
-  error ("Variables "^string_of_id x^" and "^string_of_id y^
+  error ("Variables "^Id.to_string x^" and "^Id.to_string y^
     " must be in the same scope.")
 
 (**********************************************************************)
@@ -419,13 +419,19 @@ let precedence_of_entry_type from = function
 (* "{ x } + { y }" : "{ x } / + { y }" *)
 (* "< x , y > { z , t }" : "< x , / y > / { z , / t }" *)
 
-let is_left_bracket s =
+let starts_with_left_bracket s =
   let l = String.length s in not (Int.equal l 0) &&
   (s.[0] == '{' || s.[0] == '[' || s.[0] == '(')
 
-let is_right_bracket s =
+let ends_with_right_bracket s =
   let l = String.length s in not (Int.equal l 0) &&
   (s.[l-1] == '}' || s.[l-1] == ']' || s.[l-1] == ')')
+
+let is_left_bracket s =
+  starts_with_left_bracket s && not (ends_with_right_bracket s)
+
+let is_right_bracket s =
+  not (starts_with_left_bracket s) && ends_with_right_bracket s
 
 let is_comma s =
   let l = String.length s in not (Int.equal l 0) &&
@@ -445,7 +451,18 @@ let is_non_terminal = function
   | NonTerminal _ | SProdList _ -> true
   | _ -> false
 
+let is_next_non_terminal prods =
+  prods <> [] && is_non_terminal (List.hd prods)
+
+let is_next_terminal = function Terminal _ :: _ -> true | _ -> false
+
+let is_next_break = function Break _ :: _ -> true | _ -> false
+
 let add_break n l = UnpCut (PpBrk(n,0)) :: l
+
+let add_break_if_none n = function
+  | ((UnpCut (PpBrk _) :: _) | []) as l -> l
+  | l -> UnpCut (PpBrk(n,0)) :: l
 
 let check_open_binder isopen sl m =
   if isopen && not (List.is_empty sl) then
@@ -456,57 +473,41 @@ let check_open_binder isopen sl m =
 
 (* Heuristics for building default printing rules *)
 
-type previous_prod_status = NoBreak | CanBreak
-
 let make_hunks etyps symbols from =
   let vars,typs = List.split etyps in
-  let rec make ws = function
+  let rec make = function
     | NonTerminal m :: prods ->
 	let i = List.index m vars in
 	let _,prec = precedence_of_entry_type from (List.nth typs (i-1)) in
 	let u = UnpMetaVar (i,prec) in
-        begin match prods with
-        | s :: _ when is_non_terminal s ->
-	  u :: add_break 1 (make CanBreak prods)
-        | _ ->
-	  u :: make CanBreak prods
-        end
-    | Terminal s :: prods when List.exists is_non_terminal prods ->
-        if is_comma s then
-	  UnpTerminal s :: add_break 1 (make NoBreak prods)
-	else if is_right_bracket s then
-	  UnpTerminal s :: add_break 0 (make NoBreak prods)
-	else if is_left_bracket s then
-          if ws == CanBreak then
-	    add_break 1 (UnpTerminal s :: make CanBreak prods)
-	  else
-	    UnpTerminal s :: make CanBreak prods
-	else if is_operator s then
-	  if ws == CanBreak then
-	    UnpTerminal (" "^s) :: add_break 1 (make NoBreak prods)
-	  else
-	    UnpTerminal s :: add_break 1 (make NoBreak prods)
-	else if is_ident_tail s.[String.length s - 1] then
-	  let sep = if is_prod_ident (List.hd prods) then "" else " " in
-	  if ws == CanBreak then
-	    add_break 1 (UnpTerminal (s^sep) :: make CanBreak prods)
-	  else
-	    UnpTerminal (s^sep) :: make CanBreak prods
-	else if ws == CanBreak then
-	  add_break 1 (UnpTerminal (s^" ") :: make CanBreak prods)
+	if is_next_non_terminal prods then
+	  u :: add_break_if_none 1 (make prods)
 	else
-	  UnpTerminal s :: make CanBreak prods
+	  u :: make_with_space prods
+    | Terminal s :: prods when List.exists is_non_terminal prods ->
+        if (is_comma s || is_operator s) then
+          (* Always a breakable space after comma or separator *)
+	  UnpTerminal s :: add_break_if_none 1 (make prods)
+	else if is_right_bracket s && is_next_terminal prods then
+          (* Always no space after right bracked, but possibly a break *)
+	  UnpTerminal s :: add_break_if_none 0 (make prods)
+        else if is_left_bracket s  && is_next_non_terminal prods then
+	  UnpTerminal s :: make prods
+	else if not (is_next_break prods) then
+          (* Add rigid space, no break, unless user asked for something *)
+          UnpTerminal (s^" ") :: make prods
+        else
+          (* Rely on user spaces *)
+          UnpTerminal s :: make prods
 
     | Terminal s :: prods ->
-	if is_right_bracket s then
-	  UnpTerminal s :: make NoBreak prods
-        else if ws == CanBreak then
-	  add_break 1 (UnpTerminal s :: make NoBreak prods)
-        else
-          UnpTerminal s :: make NoBreak prods
+        (* Separate but do not cut a trailing sequence of terminal *)
+        (match prods with
+        | Terminal _ :: _ -> UnpTerminal (s^" ") :: make prods
+        | _ -> UnpTerminal s :: make prods)
 
     | Break n :: prods ->
-	add_break n (make NoBreak prods)
+	add_break n (make prods)
 
     | SProdList (m,sl) :: prods ->
 	let i = List.index m vars in
@@ -516,25 +517,47 @@ let make_hunks etyps symbols from =
           (* If no separator: add a break *)
 	  if List.is_empty sl then add_break 1 []
           (* We add NonTerminal for simulation but remove it afterwards *)
-	  else snd (List.sep_last (make NoBreak (sl@[NonTerminal m]))) in
+	  else snd (List.sep_last (make (sl@[NonTerminal m]))) in
 	let hunk = match typ with
 	  | ETConstr _ -> UnpListMetaVar (i,prec,sl')
 	  | ETBinder isopen ->
 	      check_open_binder isopen sl m;
 	      UnpBinderListMetaVar (i,isopen,sl')
 	  | _ -> assert false in
-	hunk :: make CanBreak prods
+	hunk :: make_with_space prods
 
     | [] -> []
 
-  in make NoBreak symbols
+  and make_with_space prods =
+    match prods with
+    | Terminal s' :: prods'->
+        if is_operator s' then
+          (* A rigid space before operator and a breakable after *)
+          UnpTerminal (" "^s') :: add_break_if_none 1 (make prods')
+        else if is_comma s' then
+          (* No space whatsoever before comma *)
+          make prods
+        else if is_right_bracket s' then
+          make prods
+        else
+          (* A breakable space between any other two terminals *)
+          add_break_if_none 1 (make prods)
+    | (NonTerminal _ | SProdList _) :: _ ->
+        (* A breakable space before a non-terminal *)
+        add_break_if_none 1 (make prods)
+    | Break _ :: _ ->
+        (* Rely on user wish *)
+        make prods
+    | [] -> []
+
+  in make symbols
 
 (* Build default printing rules from explicit format *)
 
 let error_format () = error "The format does not match the notation."
 
 let rec split_format_at_ldots hd = function
-  | UnpTerminal s :: fmt when String.equal s (string_of_id ldots_var) -> List.rev hd, fmt
+  | UnpTerminal s :: fmt when String.equal s (Id.to_string ldots_var) -> List.rev hd, fmt
   | u :: fmt ->
       check_no_ldots_in_box u;
       split_format_at_ldots (u::hd) fmt
@@ -574,7 +597,7 @@ let hunks_of_format (from,(vars,typs)) symfmt =
   | Terminal s :: symbs, (UnpTerminal s') :: fmt
       when String.equal s (String.drop_simple_quotes s') ->
       let symbs, l = aux (symbs,fmt) in symbs, UnpTerminal s :: l
-  | NonTerminal s :: symbs, UnpTerminal s' :: fmt when id_eq s (id_of_string s') ->
+  | NonTerminal s :: symbs, UnpTerminal s' :: fmt when Id.equal s (Id.of_string s') ->
       let i = List.index s vars in
       let _,prec = precedence_of_entry_type from (List.nth typs (i-1)) in
       let symbs, l = aux (symbs,fmt) in symbs, UnpMetaVar (i,prec) :: l
@@ -777,14 +800,14 @@ let interp_modifiers modl =
     | [] ->
 	(assoc,level,etyps,!onlyparsing,format)
     | SetEntryType (s,typ) :: l ->
-	let id = id_of_string s in
+	let id = Id.of_string s in
 	if List.mem_assoc id etyps then
 	  error (s^" is already assigned to an entry or constr level.");
 	interp assoc level ((id,typ)::etyps) format l
     | SetItemLevel ([],n) :: l ->
 	interp assoc level etyps format l
     | SetItemLevel (s::idl,n) :: l ->
-	let id = id_of_string s in
+	let id = Id.of_string s in
 	if List.mem_assoc id etyps then
 	  error (s^" is already assigned to an entry or constr level.");
 	let typ = ETConstr (n,()) in
@@ -869,7 +892,7 @@ let make_interpretation_type isrec = function
 
 let make_interpretation_vars recvars allvars =
   let eq_subscope (sc1, l1) (sc2, l2) =
-    Option.Misc.compare String.equal sc1 sc2 &&
+    Option.equal String.equal sc1 sc2 &&
     List.equal String.equal l1 l2
   in
   List.iter (fun (x,y) ->
@@ -1060,7 +1083,7 @@ let contract_notation ntn =
   let rec aux ntn i =
     if i <= String.length ntn - 5 then
       let ntn' =
-        if String.equal (String.sub ntn i 5) "{ _ }" then
+        if String.is_sub "{ _ }" ntn i then
           String.sub ntn 0 i ^ "_" ^
           String.sub ntn (i+5) (String.length ntn -i-5)
         else ntn in
@@ -1216,7 +1239,7 @@ let add_notation local c ((loc,df),modifiers) sc =
 
 (* Infix notations *)
 
-let inject_var x = CRef (Ident (Loc.ghost, id_of_string x))
+let inject_var x = CRef (Ident (Loc.ghost, Id.of_string x))
 
 let add_infix local ((loc,inf),modifiers) pr sc =
   check_infix_modifiers modifiers;

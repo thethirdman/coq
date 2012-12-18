@@ -33,10 +33,10 @@ module UniverseLevel = struct
 
   type t =
     | Set
-    | Level of int * Names.dir_path
+    | Level of int * Names.Dir_path.t
 
   (* A specialized comparison function: we compare the [int] part first.
-     This way, most of the time, the [dir_path] part is not considered.
+     This way, most of the time, the [Dir_path.t] part is not considered.
 
      Normally, placing the [int] first in the pair above in enough in Ocaml,
      but to be sure, we write below our own comparison function.
@@ -53,19 +53,19 @@ module UniverseLevel = struct
     | Level (i1, dp1), Level (i2, dp2) ->
       if i1 < i2 then -1
       else if i1 > i2 then 1
-      else Names.dir_path_ord dp1 dp2)
+      else Names.Dir_path.compare dp1 dp2)
 
   let equal u v = match u,v with
     | Set, Set -> true
     | Level (i1, dp1), Level (i2, dp2) ->
-      Int.equal i1 i2 && Int.equal (Names.dir_path_ord dp1 dp2) 0
+      Int.equal i1 i2 && Int.equal (Names.Dir_path.compare dp1 dp2) 0
     | _ -> false
 
   let make m n = Level (n, m)
 
   let to_string = function
     | Set -> "Set"
-    | Level (n,d) -> Names.string_of_dirpath d^"."^string_of_int n
+    | Level (n,d) -> Names.Dir_path.to_string d^"."^string_of_int n
 end
 
 module UniverseLMap = Map.Make (UniverseLevel)
@@ -165,9 +165,10 @@ let sup u v =
 type canonical_arc =
     { univ: UniverseLevel.t;
       lt: UniverseLevel.t list;
-      le: UniverseLevel.t list }
+      le: UniverseLevel.t list;
+      rank: int }
 
-let terminal u = {univ=u; lt=[]; le=[]}
+let terminal u = {univ=u; lt=[]; le=[]; rank=0}
 
 (* A UniverseLevel.t is either an alias for another one, or a canonical one,
    for which we know the universes that are above *)
@@ -474,24 +475,46 @@ let setleq_if (g,arcu) v =
 (* we assume  compare(u,v) = LE *)
 (* merge u v  forces u ~ v with repr u as canonical repr *)
 let merge g arcu arcv =
-  match between g arcu arcv with
-    | arcu::v -> (* arcu is chosen as canonical and all others (v) are *)
-                 (* redirected to it *)
-	let redirect (g,w,w') arcv =
- 	  let g' = enter_equiv_arc arcv.univ arcu.univ g in
- 	  (g',List.unionq arcv.lt w,arcv.le@w')
-	in
-	let (g',w,w') = List.fold_left redirect (g,[],[]) v in
-	let g_arcu = (g',arcu) in
-	let g_arcu = List.fold_left setlt_if g_arcu w in
-	let g_arcu = List.fold_left setleq_if g_arcu w' in
-	fst g_arcu
-    | [] -> anomaly "Univ.between"
+  (* we find the arc with the biggest rank, and we redirect all others to it *)
+  let arcu, g, v =
+    let best_ranked (max_rank, old_max_rank, best_arc, rest) arc =
+      if arc.rank >= max_rank
+      then (arc.rank, max_rank, arc, best_arc::rest)
+      else (max_rank, old_max_rank, best_arc, arc::rest)
+    in
+    match between g arcu arcv with
+      | [] -> anomaly "Univ.between"
+      | arc::rest ->
+        let (max_rank, old_max_rank, best_arc, rest) =
+          List.fold_left best_ranked (arc.rank, min_int, arc, []) rest in
+        if max_rank > old_max_rank then best_arc, g, rest
+        else begin
+          (* one redirected node also has max_rank *)
+          let arcu = {best_arc with rank = max_rank + 1} in
+          arcu, enter_arc arcu g, rest
+        end 
+  in
+  let redirect (g,w,w') arcv =
+    let g' = enter_equiv_arc arcv.univ arcu.univ g in
+    (g',List.unionq arcv.lt w,arcv.le@w')
+  in
+  let (g',w,w') = List.fold_left redirect (g,[],[]) v in
+  let g_arcu = (g',arcu) in
+  let g_arcu = List.fold_left setlt_if g_arcu w in
+  let g_arcu = List.fold_left setleq_if g_arcu w' in
+  fst g_arcu
 
 (* merge_disc : UniverseLevel.t -> UniverseLevel.t -> unit *)
 (* we assume  compare(u,v) = compare(v,u) = NLE *)
 (* merge_disc u v  forces u ~ v with repr u as canonical repr *)
-let merge_disc g arcu arcv =
+let merge_disc g arc1 arc2 =
+  let arcu, arcv = if arc1.rank < arc2.rank then arc2, arc1 else arc1, arc2 in
+  let arcu, g = 
+    if arc1.rank <> arc2.rank then arcu, g
+    else
+      let arcu = {arcu with rank = succ arcu.rank} in 
+      arcu, enter_arc arcu g
+  in
   let g' = enter_equiv_arc arcv.univ arcu.univ g in
   let g_arcu = (g',arcu) in
   let g_arcu = List.fold_left setlt_if g_arcu arcv.lt in
@@ -638,7 +661,7 @@ let normalize_universes g =
   in
   let canonicalize u = function
     | Equiv _ -> Equiv (repr u)
-    | Canonical {univ=v; lt=lt; le=le} ->
+    | Canonical {univ=v; lt=lt; le=le; rank=rank} ->
       assert (u == v);
       (* avoid duplicates and self-loops *)
       let lt = lrepr lt and le = lrepr le in
@@ -650,6 +673,7 @@ let normalize_universes g =
         univ = v;
         lt = UniverseLSet.elements lt;
         le = UniverseLSet.elements le;
+	rank = rank
       }
   in
   UniverseLMap.mapi canonicalize g
@@ -714,7 +738,8 @@ let bellman_ford bottom g =
     let node = Canonical {
       univ = bottom;
       lt = [];
-      le = UniverseLSet.elements vertices
+      le = UniverseLSet.elements vertices;
+      rank = 0
     } in UniverseLMap.add bottom node g
   in
   let rec iter count accu =
@@ -751,7 +776,7 @@ let bellman_ford bottom g =
     graph already contains [Type.n] nodes (calling a module Type is
     probably a bad idea anyway). *)
 let sort_universes orig =
-  let mp = Names.make_dirpath [Names.id_of_string "Type"] in
+  let mp = Names.Dir_path.make [Names.Id.of_string "Type"] in
   let rec make_level accu g i =
     let type0 = UniverseLevel.Level (i, mp) in
     let distances = bellman_ford type0 g in
@@ -774,12 +799,12 @@ let sort_universes orig =
           | false, true -> push res v
           | false, false -> res
         end
-      | Canonical {univ=v; lt=lt; le=le} ->
+      | Canonical {univ=v; lt=lt; le=le; rank=r} ->
         assert (u == v);
         if filter u then
           let lt = List.filter filter lt in
           let le = List.filter filter le in
-          UniverseLMap.add u (Canonical {univ=u; lt=lt; le=le}) res
+          UniverseLMap.add u (Canonical {univ=u; lt=lt; le=le; rank=r}) res
         else
           let res = List.fold_left (fun g u -> if filter u then push g u else g) res lt in
           let res = List.fold_left (fun g u -> if filter u then push g u else g) res le in
@@ -799,7 +824,8 @@ let sort_universes orig =
         let g = UniverseLMap.add u (Canonical {
           univ = u;
           le = [];
-          lt = [types.(i+1)]
+          lt = [types.(i+1)];
+	  rank = 1
         }) g in aux (i+1) g
       else g
     in aux 0 g
@@ -811,7 +837,7 @@ let sort_universes orig =
 (* Temporary inductive type levels *)
 
 let fresh_level =
-  let n = ref 0 in fun () -> incr n; UniverseLevel.Level (!n, Names.make_dirpath [])
+  let n = ref 0 in fun () -> incr n; UniverseLevel.Level (!n, Names.Dir_path.make [])
 
 let fresh_local_univ () = Atom (fresh_level ())
 
@@ -945,7 +971,7 @@ module Hunivlevel =
   Hashcons.Make(
     struct
       type t = universe_level
-      type u = Names.dir_path -> Names.dir_path
+      type u = Names.Dir_path.t -> Names.Dir_path.t
       let hashcons hdir = function
 	| UniverseLevel.Set -> UniverseLevel.Set
 	| UniverseLevel.Level (n,d) -> UniverseLevel.Level (n,hdir d)
@@ -978,7 +1004,7 @@ module Huniv =
       let hash = Hashtbl.hash
     end)
 
-let hcons_univlevel = Hashcons.simple_hcons Hunivlevel.generate Names.hcons_dirpath
+let hcons_univlevel = Hashcons.simple_hcons Hunivlevel.generate Names.Dir_path.hcons
 let hcons_univ = Hashcons.simple_hcons Huniv.generate hcons_univlevel
 
 module Hconstraint =

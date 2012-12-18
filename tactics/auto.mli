@@ -88,7 +88,7 @@ module Hint_db :
     val add_cut : hints_path -> t -> t
     val cut : t -> hints_path
 
-    val unfolds : t -> Idset.t * Cset.t
+    val unfolds : t -> Id.Set.t * Cset.t
   end
 
 type hint_db_name = string
@@ -96,8 +96,8 @@ type hint_db_name = string
 type hint_db = Hint_db.t
 
 type hints_entry =
-  | HintsResolveEntry of (int option * bool * hints_path_atom * global_reference) list
-  | HintsImmediateEntry of (hints_path_atom * global_reference) list
+  | HintsResolveEntry of (int option * bool * hints_path_atom * global_reference_or_constr) list
+  | HintsImmediateEntry of (hints_path_atom * global_reference_or_constr) list
   | HintsCutEntry of hints_path
   | HintsUnfoldEntry of evaluable_global_reference list
   | HintsTransparencyEntry of evaluable_global_reference list * bool

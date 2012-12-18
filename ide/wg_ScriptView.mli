@@ -13,8 +13,8 @@ type source_view = [ Gtk.text_view | `sourceview ] Gtk.obj
 class script_view : source_view -> Coq.coqtop ->
 object
   inherit GSourceView2.source_view
-  method undo : unit -> bool
-  method redo : unit -> bool
+  method undo : unit -> unit
+  method redo : unit -> unit
   method clear_undo : unit -> unit
   method auto_complete : bool
   method set_auto_complete : bool -> unit
@@ -24,6 +24,7 @@ object
   method set_show_right_margin : bool -> unit
   method comment : unit -> unit
   method uncomment : unit -> unit
+  method recenter_insert : unit
 end
 
 val script_view : Coq.coqtop ->

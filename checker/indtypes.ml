@@ -19,12 +19,12 @@ open Declarations
 open Environ
 
 let rec debug_string_of_mp = function
-  | MPfile sl -> string_of_dirpath sl
+  | MPfile sl -> Dir_path.to_string sl
   | MPbound uid -> "bound("^string_of_mbid uid^")"
   | MPdot (mp,l) -> debug_string_of_mp mp ^ "." ^ string_of_label l
 
 let rec string_of_mp = function
-  | MPfile sl -> string_of_dirpath sl
+  | MPfile sl -> Dir_path.to_string sl
   | MPbound uid -> string_of_mbid uid
   | MPdot (mp,l) -> string_of_mp mp ^ "." ^ string_of_label l
 
@@ -76,10 +76,10 @@ type inductive_error =
   | NotEnoughArgs of env * constr * constr
   | NotConstructor of env * constr * constr
   | NonPar of env * constr * int * constr * constr
-  | SameNamesTypes of identifier
-  | SameNamesConstructors of identifier
-  | SameNamesOverlap of identifier list
-  | NotAnArity of identifier
+  | SameNamesTypes of Id.t
+  | SameNamesConstructors of Id.t
+  | SameNamesOverlap of Id.t list
+  | NotAnArity of Id.t
   | BadEntry
 
 exception InductiveError of inductive_error

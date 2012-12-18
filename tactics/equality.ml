@@ -84,6 +84,7 @@ let rewrite_unif_flags = {
   Unification.use_metas_eagerly_in_conv_on_closed_terms = true;
   Unification.modulo_delta = empty_transparent_state;
   Unification.modulo_delta_types = empty_transparent_state;
+  Unification.modulo_delta_in_merge = None;
   Unification.check_applied_meta_types = true;
   Unification.resolve_evars = true;
   Unification.use_pattern_unification = true;
@@ -152,6 +153,7 @@ let rewrite_conv_closed_unif_flags = {
 
   Unification.modulo_delta = empty_transparent_state;
   Unification.modulo_delta_types = full_transparent_state;
+  Unification.modulo_delta_in_merge = None;
   Unification.check_applied_meta_types = true;
   Unification.resolve_evars = false;
   Unification.use_pattern_unification = true;
@@ -399,7 +401,7 @@ let general_multi_rewrite l2r with_evars ?tac c cl =
 	  (* If the term to rewrite uses an hypothesis H, don't rewrite in H *)
 	  let ids =
 	    let ids_in_c = Environ.global_vars_set (Global.env()) (fst c) in
-	      Idset.fold (fun id l -> List.remove id l) ids_in_c (pf_ids_of_hyps gl)
+	      Id.Set.fold (fun id l -> List.remove id l) ids_in_c (pf_ids_of_hyps gl)
 	  in do_hyps_atleastonce ids gl
 	in
 	if cl.concl_occs == NoOccurrences then do_hyps else
@@ -755,7 +757,7 @@ let discrimination_pf e (t,t1,t2) discriminator lbeq =
   let eq_elim     = ind_scheme_of_eq lbeq in
   (applist (eq_elim, [t;t1;mkNamedLambda e t discriminator;i;t2]), absurd_term)
 
-let eq_baseid = id_of_string "e"
+let eq_baseid = Id.of_string "e"
 
 let apply_on_clause (f,t) clause =
   let sigma =  clause.evd in
@@ -878,7 +880,7 @@ let minimal_free_rels env sigma (c,cty) =
   let cty_rels = free_rels cty in
   let cty' = simpl env sigma cty in
   let rels' = free_rels cty' in
-  if Intset.subset cty_rels rels' then
+  if Int.Set.subset cty_rels rels' then
     (cty,cty_rels)
   else
     (cty',rels')
@@ -888,10 +890,10 @@ let minimal_free_rels env sigma (c,cty) =
 let minimal_free_rels_rec env sigma =
   let rec minimalrec_free_rels_rec prev_rels (c,cty) =
     let (cty,direct_rels) = minimal_free_rels env sigma (c,cty) in
-    let combined_rels = Intset.union prev_rels direct_rels in
+    let combined_rels = Int.Set.union prev_rels direct_rels in
     let folder rels i = snd (minimalrec_free_rels_rec rels (c, type_of env sigma (mkRel i)))
-    in (cty, List.fold_left folder combined_rels (Intset.elements (Intset.diff direct_rels prev_rels)))
-  in minimalrec_free_rels_rec Intset.empty
+    in (cty, List.fold_left folder combined_rels (Int.Set.elements (Int.Set.diff direct_rels prev_rels)))
+  in minimalrec_free_rels_rec Int.Set.empty
 
 (* [sig_clausal_form siglen ty]
 
@@ -1024,7 +1026,7 @@ let sig_clausal_form env sigma sort_of_ty siglen ty dflt =
 let make_iterated_tuple env sigma dflt (z,zty) =
   let (zty,rels) = minimal_free_rels_rec env sigma (z,zty) in
   let sort_of_zty = get_sort_of env sigma zty in
-  let sorted_rels = Sort.list (<) (Intset.elements rels) in
+  let sorted_rels = Sort.list (<) (Int.Set.elements rels) in
   let (tuple,tuplety) =
     List.fold_left (make_tuple env sigma) (z,zty) sorted_rels
   in
@@ -1140,7 +1142,7 @@ let injEq ipats (eq,_,(t,t1,t2) as u) eq_clause =
               then (
 (* Require Import Eqdec_dec copied from vernac_require in vernacentries.ml*)
               let qidl = qualid_of_reference
-                (Ident (Loc.ghost,id_of_string "Eqdep_dec")) in
+                (Ident (Loc.ghost,Id.of_string "Eqdep_dec")) in
               Library.require_library [qidl] (Some false);
 (* cut with the good equality and prove the requested goal *)
               tclTHENS (cut (mkApp (ceq,new_eq_args)) )
@@ -1394,7 +1396,7 @@ let restrict_to_eq_and_identity eq = (* compatibility *)
     not (eq_constr eq (constr_of_global glob_identity)) then
     raise PatternMatchingFailure
 
-exception FoundHyp of (identifier * constr * bool)
+exception FoundHyp of (Id.t * constr * bool)
 
 (* tests whether hyp [c] is [x = t] or [t = x], [x] not occuring in [t] *)
 let is_eq_x gl x (id,_,c) =
@@ -1412,7 +1414,7 @@ let subst_one dep_proof_ok x (hyp,rhs,dir) gl =
   (* The set of hypotheses using x *)
   let depdecls =
     let test (id,_,c as dcl) =
-      if not (id_eq id hyp) && occur_var_in_decl (pf_env gl) x dcl then Some dcl
+      if not (Id.equal id hyp) && occur_var_in_decl (pf_env gl) x dcl then Some dcl
       else None in
     List.rev (List.map_filter test (pf_hyps gl)) in
   let dephyps = List.map (fun (id,_,_) -> id) depdecls in

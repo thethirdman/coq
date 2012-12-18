@@ -53,7 +53,7 @@ type section_variable_entry =
   | SectionLocalDef of constr * types option * bool (* opacity *)
   | SectionLocalAssum of types * bool (* Implicit status *)
 
-type variable_declaration = dir_path * section_variable_entry * logical_kind
+type variable_declaration = Dir_path.t * section_variable_entry * logical_kind
 
 let cache_variable ((sp,_),o) =
   match o with
@@ -80,7 +80,7 @@ let discharge_variable (_,o) = match o with
   | Inl _ -> Some o
 
 type variable_obj =
-    (Univ.constraints, identifier * variable_declaration) union
+    (Univ.constraints, Id.t * variable_declaration) union
 
 let inVariable : variable_obj -> obj =
   declare_object { (default_object "VARIABLE") with

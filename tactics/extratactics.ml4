@@ -289,11 +289,7 @@ let project_hint pri l2r r =
   let c = Reductionops.whd_beta Evd.empty (mkApp (c,Termops.extended_rel_vect 0 sign)) in
   let c = it_mkLambda_or_LetIn
     (mkApp (p,[|mkArrow a (lift 1 b);mkArrow b (lift 1 a);c|])) sign in
-  let id =
-    Nameops.add_suffix (Nametab.basename_of_global gr) ("_proj_" ^ (if l2r then "l2r" else "r2l"))
-  in
-  let c = Declare.declare_definition ~internal:Declare.KernelSilent id c in
-    (pri,true,Auto.PathAny, Globnames.ConstRef c)
+    (pri,true,Auto.PathAny, Globnames.IsConstr c)
 
 let add_hints_iff l2r lc n bl =
   Auto.add_hints true bl
@@ -555,7 +551,7 @@ let subst_var_with_hole occ tid t =
   let locref = ref 0 in
   let rec substrec = function
     | GVar (_,id) as x -> 
-        if id_eq id tid 
+        if Id.equal id tid 
         then
 	  (decr occref;
 	   if Int.equal !occref 0 then x
@@ -654,7 +650,7 @@ END
 exception Found of tactic
 
 let rewrite_except h g =
-  tclMAP (fun id -> if id_eq id h then tclIDTAC else 
+  tclMAP (fun id -> if Id.equal id h then tclIDTAC else 
       tclTRY (Equality.general_rewrite_in true Locus.AllOccurrences true true id (mkVar h) false))
     (Tacmach.pf_ids_of_hyps g) g
 
@@ -688,7 +684,7 @@ let case_eq_intros_rewrite x g =
       mkCaseEq x;
       (fun g -> 
 	let n' = nb_prod (Tacmach.pf_concl g) in
-	let h = fresh_id (Tacmach.pf_ids_of_hyps g) (id_of_string "heq") g in
+	let h = fresh_id (Tacmach.pf_ids_of_hyps g) (Id.of_string "heq") g in
 	tclTHENLIST [ (tclDO (n'-n-1) intro);
 		      Tacmach.introduction h;
 		      rewrite_except h] g

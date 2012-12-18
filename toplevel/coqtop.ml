@@ -23,7 +23,7 @@ let fatal_error info =
 
 let get_version_date () =
   try
-    let coqlib = Envars.coqlib Errors.error in
+    let coqlib = Envars.coqlib ~fail:Errors.error in
     let ch = open_in (Filename.concat coqlib "revision") in
     let ver = input_line ch in
     let rev = input_line ch in
@@ -32,8 +32,8 @@ let get_version_date () =
 
 let print_header () =
   let (ver,rev) = (get_version_date ()) in
-    pp (str "Welcome to Coq "++ str ver ++ str " (" ++ str rev ++ str ")" ++ fnl ());
-    flush stdout
+  pp (str "Welcome to Coq "++ str ver ++ str " (" ++ str rev ++ str ")" ++ fnl ());
+  pp_flush ()
 
 let output_context = ref false
 
@@ -52,10 +52,10 @@ let engage () =
 
 let set_batch_mode () = batch_mode := true
 
-let toplevel_default_name = make_dirpath [id_of_string "Top"]
+let toplevel_default_name = Dir_path.make [Id.of_string "Top"]
 let toplevel_name = ref (Some toplevel_default_name)
 let set_toplevel_name dir =
-  if dir_path_eq dir empty_dirpath then error "Need a non empty toplevel module name";
+  if Dir_path.equal dir Dir_path.empty then error "Need a non empty toplevel module name";
   toplevel_name := Some dir
 let unset_toplevel_name () = toplevel_name := None
 
@@ -63,11 +63,11 @@ let remove_top_ml () = Mltop.remove ()
 
 let inputstate = ref ""
 let set_inputstate s = inputstate:=s
-let inputstate () = if not (String.equal !inputstate "") then intern_state !inputstate
+let inputstate () = if not (String.is_empty !inputstate) then intern_state !inputstate
 
 let outputstate = ref ""
 let set_outputstate s = outputstate:=s
-let outputstate () = if not (String.equal !outputstate "") then extern_state !outputstate
+let outputstate () = if not (String.is_empty !outputstate) then extern_state !outputstate
 
 let set_default_include d = push_include (d,Nameops.default_root_prefix)
 let set_include d p =
@@ -295,7 +295,9 @@ let parse_args arglist =
     | "-coqlib" :: d :: rem -> Flags.coqlib_spec:=true; Flags.coqlib:=d; parse rem
     | "-coqlib" :: [] -> usage ()
 
-    | "-where" :: _ -> print_endline (Envars.coqlib Errors.error); exit (if !filter_opts then 2 else 0)
+    | "-where" :: _ ->
+        print_endline (Envars.coqlib ~fail:Errors.error);
+        exit (if !filter_opts then 2 else 0)
 
     | ("-config"|"--config") :: _ -> Usage.print_config (); exit (if !filter_opts then 2 else 0)
 

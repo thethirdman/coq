@@ -92,6 +92,21 @@ let ocaml_toploop () =
     | WithTop t -> Printexc.catch t.ml_loop ()
     | _ -> ()
 
+(* Try to interpret load_obj's (internal) errors *)
+let report_on_load_obj_error exc =
+  let x = Obj.repr exc in
+  (* Try an horrible (fragile) hack to report on Symtable dynlink errors *)
+  (* (we follow ocaml's Printexc.to_string decoding of exceptions) *)
+  if Obj.is_block x && Obj.magic(Obj.field (Obj.field x 0) 0) = "Symtable.Error"
+  then
+    let err_block = Obj.field x 1 in
+    if Obj.tag err_block = 0 then
+      (* Symtable.Undefined_global of string *)
+      str "reference to undefined global " ++
+      str (Obj.magic (Obj.field err_block 0))
+    else str (Printexc.to_string exc)
+  else str (Printexc.to_string exc)
+
 (* Dynamic loading of .cmo/.cma *)
 let dir_ml_load s =
   match !load with
@@ -99,8 +114,10 @@ let dir_ml_load s =
       (try t.load_obj s
        with
        | (UserError _ | Failure _ | Anomaly _ | Not_found as u) -> raise u
-       | _ -> errorlabstrm "Mltop.load_object" (str"Cannot link ml-object " ++
-                str s ++ str" to Coq code."))
+       | exc ->
+           let msg = report_on_load_obj_error exc in
+           errorlabstrm "Mltop.load_object" (str"Cannot link ml-object " ++
+                str s ++ str" to Coq code (" ++ msg ++ str ")."))
     | WithoutTop ->
         let warn = Flags.is_verbose() in
         let _,gname = find_file_in_path ~warn !coq_mlpath_copy s in
@@ -138,7 +155,7 @@ let add_path ~unix_path:dir ~coq_root:coq_dirpath =
     msg_warning (str ("Cannot open " ^ dir))
 
 let convert_string d =
-  try Names.id_of_string d
+  try Names.Id.of_string d
   with _ ->
     if_warn msg_warning (str ("Directory "^d^" cannot be used as a Coq identifier (skipped)"));
     raise Exit
@@ -146,11 +163,11 @@ let convert_string d =
 let add_rec_path ~unix_path ~coq_root =
   if exists_dir unix_path then
     let dirs = all_subdirs ~unix_path in
-    let prefix = Names.repr_dirpath coq_root in
+    let prefix = Names.Dir_path.repr coq_root in
     let convert_dirs (lp, cp) =
       try
         let path = List.map convert_string (List.rev cp) @ prefix in
-        Some (lp, Names.make_dirpath path)
+        Some (lp, Names.Dir_path.make path)
       with Exit -> None
     in
     let dirs = List.map_filter convert_dirs dirs in
@@ -220,31 +237,31 @@ let file_of_name name =
  * (linked or loaded with load_object). It is used not to load a
  * module twice. It is NOT the list of ML modules Coq knows. *)
 
-let known_loaded_modules = ref Stringset.empty
+let known_loaded_modules = ref String.Set.empty
 
 let add_known_module mname =
   let mname = String.capitalize mname in
-  known_loaded_modules := Stringset.add mname !known_loaded_modules
+  known_loaded_modules := String.Set.add mname !known_loaded_modules
 
 let module_is_known mname =
-  Stringset.mem (String.capitalize mname) !known_loaded_modules
+  String.Set.mem (String.capitalize mname) !known_loaded_modules
 
 (** A plugin is just an ML module with an initialization function. *)
 
-let known_loaded_plugins = ref Stringmap.empty
+let known_loaded_plugins = ref String.Map.empty
 
 let add_known_plugin init name =
   let name = String.capitalize name in
   add_known_module name;
-  known_loaded_plugins := Stringmap.add name init !known_loaded_plugins
+  known_loaded_plugins := String.Map.add name init !known_loaded_plugins
 
 let init_known_plugins () =
-  Stringmap.iter (fun _ f -> f()) !known_loaded_plugins
+  String.Map.iter (fun _ f -> f()) !known_loaded_plugins
 
 (** ml object = ml module or plugin *)
 
 let init_ml_object mname =
-  try Stringmap.find mname !known_loaded_plugins ()
+  try String.Map.find mname !known_loaded_plugins ()
   with Not_found -> ()
 
 let load_ml_object mname fname=
@@ -254,7 +271,7 @@ let load_ml_object mname fname=
 
 (* Summary of declared ML Modules *)
 
-(* List and not Stringset because order is important: most recent first. *)
+(* List and not String.Set because order is important: most recent first. *)
 
 let loaded_modules = ref []
 let get_loaded_modules () = List.rev !loaded_modules

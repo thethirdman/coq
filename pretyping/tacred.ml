@@ -38,7 +38,7 @@ exception Redelimination
 
 let error_not_evaluable r =
   errorlabstrm "error_not_evaluable"
-    (str "Cannot coerce" ++ spc () ++ Nametab.pr_global_env Idset.empty r ++
+    (str "Cannot coerce" ++ spc () ++ Nametab.pr_global_env Id.Set.empty r ++
      spc () ++ str "to an evaluable reference.")
 
 let is_evaluable_const env cst =
@@ -70,13 +70,13 @@ let global_of_evaluable_reference = function
 
 type evaluable_reference =
   | EvalConst of constant
-  | EvalVar of identifier
+  | EvalVar of Id.t
   | EvalRel of int
   | EvalEvar of existential
 
 let evaluable_reference_eq r1 r2 = match r1, r2 with
 | EvalConst c1, EvalConst c2 -> eq_constant c1 c2
-| EvalVar id1, EvalVar id2 -> id_eq id1 id2
+| EvalVar id1, EvalVar id2 -> Id.equal id1 id2
 | EvalRel i1, EvalRel i2 -> Int.equal i1 i2
 | EvalEvar (e1, ctx1), EvalEvar (e2, ctx2) ->
   Int.equal e1 e2 && Array.equal eq_constr ctx1 ctx2
@@ -198,7 +198,7 @@ let check_fix_reversibility labs args ((lv,i),(_,tys,bds)) =
     raise Elimconst;
   List.iteri (fun i t_i ->
     if not (List.mem_assoc (i+1) li) then
-      let fvs = List.map ((+) (i+1)) (Intset.elements (free_rels t_i)) in
+      let fvs = List.map ((+) (i+1)) (Int.Set.elements (free_rels t_i)) in
       match List.intersect fvs reversible_rels with
       | [] -> ()
       | _ -> raise Elimconst)
@@ -220,7 +220,7 @@ let invert_name labs l na0 env sigma ref = function
   | Name id ->
       let minfxargs = List.length l in
       begin match na0 with
-      | Name id' when id_eq id' id ->
+      | Name id' when Id.equal id' id ->
         Some (minfxargs,ref)
       | _ ->
 	let refi = match ref with
@@ -334,7 +334,7 @@ let reference_eval sigma env = function
    The type Tij' is Tij[yi(j-1)..y1 <- ai(j-1)..a1]
 *)
 
-let x = Name (id_of_string "x")
+let x = Name (Id.of_string "x")
 
 let make_elim_fun (names,(nbfix,lv,n)) largs =
   let lu = List.firstn n largs in
@@ -363,8 +363,8 @@ let make_elim_fun (names,(nbfix,lv,n)) largs =
    do so that the reduction uses this extra information *)
 
 let dummy = mkProp
-let vfx = id_of_string"_expanded_fix_"
-let vfun = id_of_string"_eliminator_function_"
+let vfx = Id.of_string"_expanded_fix_"
+let vfun = Id.of_string"_eliminator_function_"
 
 (* Mark every occurrence of substituted vars (associated to a function)
    as a problem variable: an evar that can be instantiated either by
@@ -372,7 +372,7 @@ let vfun = id_of_string"_eliminator_function_"
 let substl_with_function subst constr =
   let cnt = ref 0 in
   let evd = ref Evd.empty in
-  let minargs = ref Intmap.empty in
+  let minargs = ref Int.Map.empty in
   let v = Array.of_list subst in
   let rec subst_total k c =
     match kind_of_term c with
@@ -386,7 +386,7 @@ let substl_with_function subst constr =
                       (val_of_named_context
                         [(vfx,None,dummy);(vfun,None,dummy)])
                       dummy);
-                  minargs := Intmap.add !cnt min !minargs;
+                  minargs := Int.Map.add !cnt min !minargs;
                   lift k (mkEvar(!cnt,[|fx;ref|]))
               | (fx,None) -> lift k fx
           else mkRel (i - Array.length v)
@@ -406,8 +406,8 @@ let solve_arity_problem env sigma fxminargs c =
     let c' = whd_betaiotazeta sigma c in
     let (h,rcargs) = decompose_app c' in
     match kind_of_term h with
-        Evar(i,_) when Intmap.mem i fxminargs && not (Evd.is_defined !evm i) ->
-          let minargs = Intmap.find i fxminargs in
+        Evar(i,_) when Int.Map.mem i fxminargs && not (Evd.is_defined !evm i) ->
+          let minargs = Int.Map.find i fxminargs in
           if List.length rcargs < minargs then
             if strict then set_fix i
             else raise Partial;
@@ -434,7 +434,7 @@ let substl_checking_arity env subst c =
      the other ones are replaced by the function symbol *)
   let rec nf_fix c =
     match kind_of_term c with
-        Evar(i,[|fx;f|] as ev) when Intmap.mem i minargs ->
+        Evar(i,[|fx;f|] as ev) when Int.Map.mem i minargs ->
           (match Evd.existential_opt_value sigma' ev with
               Some c' -> c'
             | None -> f)
@@ -957,7 +957,7 @@ let substlin env evalref n (nowhere_except_in,locs) c =
   (!pos, t')
 
 let string_of_evaluable_ref env = function
-  | EvalVarRef id -> string_of_id id
+  | EvalVarRef id -> Id.to_string id
   | EvalConstRef kn ->
       string_of_qualid
         (Nametab.shortest_qualid_of_global (vars_of_env env) (ConstRef kn))
@@ -1125,7 +1125,7 @@ let reduce_to_ref_gen allow_product env sigma ref t =
     | IndRef mind' when eq_ind mind mind' -> t
     | _ ->
       errorlabstrm "" (str "Cannot recognize a statement based on " ++
-        Nametab.pr_global_env Idset.empty ref ++ str".")
+        Nametab.pr_global_env Id.Set.empty ref ++ str".")
     end
   else
   (* lazily reduces to match the head of [t] with the expected [ref] *)
@@ -1138,7 +1138,7 @@ let reduce_to_ref_gen allow_product env sigma ref t =
 	  else
 	     errorlabstrm ""
 	       (str "Cannot recognize an atomic statement based on " ++
-	        Nametab.pr_global_env Idset.empty ref ++ str".")
+	        Nametab.pr_global_env Id.Set.empty ref ++ str".")
       | _ ->
 	  try
 	    if eq_gr (global_of_constr c) ref
@@ -1151,7 +1151,7 @@ let reduce_to_ref_gen allow_product env sigma ref t =
           with NotStepReducible ->
 	    errorlabstrm ""
 	      (str "Cannot recognize a statement based on " ++
-	       Nametab.pr_global_env Idset.empty ref ++ str".")
+	       Nametab.pr_global_env Id.Set.empty ref ++ str".")
   in
   elimrec env t []
 

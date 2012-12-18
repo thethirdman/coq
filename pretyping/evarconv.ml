@@ -594,9 +594,9 @@ let filter_possible_projections c ty ctxt args =
     (* Here we make an approximation, for instance, we could also be *)
     (* interested in finding a term u convertible to c such that a occurs *)
     (* in u *)
-    isRel a && Intset.mem (destRel a) fv1 ||
-    isVar a && Idset.mem (destVar a) fv2 ||
-    Idset.mem id tyvars)
+    isRel a && Int.Set.mem (destRel a) fv1 ||
+    isVar a && Id.Set.mem (destVar a) fv2 ||
+    Id.Set.mem id tyvars)
     ctxt args
 
 let solve_evars = ref (fun _ -> failwith "solve_evars not installed")

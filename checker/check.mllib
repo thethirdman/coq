@@ -2,6 +2,7 @@ Coq_config
 Int
 Pp_control
 Flags
+Xml_utils
 Xml_pp
 Pp
 Loc
@@ -9,14 +10,14 @@ Segmenttree
 Unicodetable
 Unicode
 Errors
+Hashset
+Hashcons
 CObj
 CList
 CString
 CArray
 Util
 Option
-Hashset
-Hashcons
 CUnix
 System
 Envars

@@ -32,13 +32,16 @@ let load_rcfile() =
         if CUnix.file_readable_p !rcfile then
           Vernac.load_vernac false !rcfile
         else raise (Sys_error ("Cannot read rcfile: "^ !rcfile))
-      else try let inferedrc = List.find CUnix.file_readable_p [
-	Envars.xdg_config_home (fun x -> msg_warning (str x))/rcdefaultname^"."^Coq_config.version;
-	Envars.xdg_config_home (fun x -> msg_warning (str x))/rcdefaultname;
-	Envars.home (fun x -> msg_warning (str x))/"."^rcdefaultname^"."^Coq_config.version;
-	Envars.home (fun x -> msg_warning (str x))/"."^rcdefaultname;
-      ] in
-        Vernac.load_vernac false inferedrc
+      else
+	try
+	  let warn x = msg_warning (str x) in
+	  let inferedrc = List.find CUnix.file_readable_p [
+	    Envars.xdg_config_home warn / rcdefaultname^"."^Coq_config.version;
+	    Envars.xdg_config_home warn / rcdefaultname;
+	    Envars.home ~warn / "."^rcdefaultname^"."^Coq_config.version;
+	    Envars.home ~warn / "."^rcdefaultname
+	  ] in
+          Vernac.load_vernac false inferedrc
 	with Not_found -> ()
 	(*
 	Flags.if_verbose
@@ -53,8 +56,8 @@ let load_rcfile() =
 
 (* Puts dir in the path of ML and in the LoadPath *)
 let coq_add_path unix_path s =
-  Mltop.add_path ~unix_path ~coq_root:(Names.make_dirpath [Nameops.coq_root;Names.id_of_string s])
-let coq_add_rec_path unix_path = Mltop.add_rec_path ~unix_path ~coq_root:(Names.make_dirpath [Nameops.coq_root])
+  Mltop.add_path ~unix_path ~coq_root:(Names.Dir_path.make [Nameops.coq_root;Names.Id.of_string s])
+let coq_add_rec_path unix_path = Mltop.add_rec_path ~unix_path ~coq_root:(Names.Dir_path.make [Nameops.coq_root])
 
 (* By the option -include -I or -R of the command line *)
 let includes = ref []
@@ -91,9 +94,9 @@ let theories_dirs_map = [
 
 (* Initializes the LoadPath *)
 let init_load_path () =
-  let coqlib = Envars.coqlib Errors.error in
+  let coqlib = Envars.coqlib ~fail:Errors.error in
   let user_contrib = coqlib/"user-contrib" in
-  let xdg_dirs = Envars.xdg_dirs (fun x -> msg_warning (str x)) in
+  let xdg_dirs = Envars.xdg_dirs ~warn:(fun x -> msg_warning (str x)) in
   let coqpath = Envars.coqpath in
   let dirs = ["plugins"] in
     (* NOTE: These directories are searched from last to first *)
@@ -101,7 +104,7 @@ let init_load_path () =
     if Coq_config.local then coq_add_path (coqlib/"dev") "dev";
     (* then standard library *)
     List.iter
-      (fun (s,alias) -> Mltop.add_rec_path ~unix_path:(coqlib/s) ~coq_root:(Names.make_dirpath [Names.id_of_string alias; Nameops.coq_root]))
+      (fun (s,alias) -> Mltop.add_rec_path ~unix_path:(coqlib/s) ~coq_root:(Names.Dir_path.make [Names.Id.of_string alias; Nameops.coq_root]))
       theories_dirs_map;
     (* then plugins *)
     List.iter (fun s -> coq_add_rec_path (coqlib/s)) dirs;
@@ -129,7 +132,7 @@ let init_ocaml_path () =
   let add_subdir dl =
     Mltop.add_ml_dir (List.fold_left (/) Envars.coqroot dl)
   in
-    Mltop.add_ml_dir (Envars.coqlib Errors.error);
+    Mltop.add_ml_dir (Envars.coqlib ~fail:Errors.error);
     List.iter add_subdir
       [ [ "config" ]; [ "dev" ]; [ "lib" ]; [ "kernel" ]; [ "library" ];
 	[ "pretyping" ]; [ "interp" ]; [ "parsing" ]; [ "proofs" ];
