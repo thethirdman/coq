@@ -30,8 +30,7 @@ let initialize_code_rules =
       | [Annotations.AString id] ->
           begin match Hyperlinks.make_hyperlink ct id with
           None -> fallback args
-          | Some (`Root (name, path)) -> `Root (fallback args, path)
-          | Some (`Link (name, path)) -> `Link (fallback args, path)
+          | Some link -> [link]
           end
       | _ -> fallback args) in
     List.iter (fun e -> Annotations.add_rule e id_manage) [Xml_pp.C_Id; Xml_pp.C_Ref];
@@ -49,10 +48,10 @@ let handle_code ct i_type code =
       if !(fst code_show) then
         Annotations.doc_of_vernac ct code
       else
-        ""
+        [Cst.NoFormat ""]
     end
   else
-    code
+    [Cst.NoFormat code]
 
 
 
@@ -70,8 +69,6 @@ let rec eval_rec_element = function
     `List doclst     -> `List (opt_map eval_doc doclst)
     | `Item d   -> `Item (eval_full_doc d)
     | `Emphasis d    -> `Emphasis (eval_full_doc d)
-    | `Root (d, str) -> `Root (eval_full_doc d, str)
-    | `Link (d, str) -> `Link (eval_full_doc d, str)
     | `Seq doc_lst   -> `Seq (opt_map eval_doc doc_lst)
 
 and eval_eval_element = function
@@ -90,7 +87,7 @@ and eval_full_doc cst =
   |_ -> `Content ""
 
 let eval_cst ct i_type = function
-    Cst.Doc d -> eval_full_doc d
+    Cst.Doc d -> Cst.Doc (eval_full_doc d)
     | Cst.Code c -> Cst.Code (handle_code ct i_type c)
     (**FIXME: this is ugly, ideally there would be parser + lexer for comments
      * but ... flemme *)

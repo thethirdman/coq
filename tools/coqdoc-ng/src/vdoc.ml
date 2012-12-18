@@ -13,6 +13,7 @@ module Backend =
       val initialize : unit    -> unit
       val header     : unit    -> string
       val doc        : Cst.doc_no_eval -> string option
+      val code       : Cst.code list   -> string list
       val indent     : int     -> string (*FIXME: not used right now*)
       val newline    : unit    -> string (*FIXME: idem *)
       val index      : 'a list -> string
@@ -23,10 +24,13 @@ struct
 (* Output file generation function: takes a default function
   * which will be called when Formatter.doc does not implement a rule
   * for a cst node *)
-let transform outc default_fun cst =
-  match (Formatter.doc cst) with
-    None -> output_string outc (default_fun cst)
-    | Some s -> output_string outc s
+let transform outc default_fun cst = match cst with
+  Cst.Doc d -> begin match Formatter.doc d with
+                None -> output_string outc (default_fun cst)
+                | Some s -> output_string outc s
+              end
+  | Cst.Code c -> List.iter (output_string outc) (Formatter.code c)
+  | _ -> assert false
 
 let header outc = output_string outc (Formatter.header ())
 let footer outc = output_string outc (Formatter.footer ())

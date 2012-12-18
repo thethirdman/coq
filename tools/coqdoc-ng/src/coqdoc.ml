@@ -50,8 +50,9 @@ let resolve_coqtop_interaction inputs =
   (** Initialize a communication layer with a coqtop instance. *)
   let _ct = Coqtop.spawn [] in
   (** Resolve every requests from inputs. *)
-  List.map
-    (fun inp -> Evaluate.eval_cst _ct (Settings.input_type ()) inp) inputs
+  let ret =List.map
+    (fun inp -> Evaluate.eval_cst _ct (Settings.input_type ()) inp) inputs in
+  Coqtop.kill_ct _ct; ret
 
 (** The role of the backend is to produce the final set of documents.
 

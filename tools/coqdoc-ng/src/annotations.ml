@@ -184,8 +184,8 @@ let add_printing_rule pr =
 let rm_printing_rule match_elt =
   add_rule Xml_pp.C_UnpTerminal
     (fun fallback args -> match args with
-      [AString s] when cmp_symbol s match_elt -> `Content match_elt
-      | _ -> fallback args)
+      [AString s] when cmp_symbol s match_elt -> [Cst.NoFormat match_elt]
+      | _ -> fallback args)                      (**FIXME: better type ? *)
 
 let _ =
   let open Cst in
@@ -219,6 +219,7 @@ let doc_of_vernac ct code =
   let ret =
     (try
       let annot_lst = annot_of_vernac ct code in
-        List.map doc_of_annot annot_lst
-    with Invalid_argument s -> print_endline  s;
-        [maybe_symbol (fun e -> Cst.NoFormat e) code]) in ret
+        List.flatten (List.map doc_of_annot annot_lst)
+    with Invalid_argument s -> print_endline s;
+      [maybe_symbol (fun e -> Cst.NoFormat e) code])
+      in ret

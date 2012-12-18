@@ -55,6 +55,9 @@ let spawn args =
     xml_parser = p;
   }
 
+let kill_ct ct =
+  Unix.kill ct.pid Sys.sigkill
+
 (* Generic function for coqtop interaction. This should not be used
  * directly *)
 let eval_call coqtop logger (c:'a Serialize.call) =

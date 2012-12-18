@@ -27,8 +27,8 @@ let make_hyperlink ct id_str =
   | Some absolute_path ->
       try (* The id already exists in id_index, we return a link *)
         Hashtbl.find id_index absolute_path;
-        Some (`Link (id_str, absolute_path))
+        Some (Cst.Link (id_str, absolute_path))
       with Not_found -> (* The id has just been declared *)
         Hashtbl.add id_index absolute_path ();
-        Some (`Root (id_str,absolute_path))
+        Some (Cst.Root (id_str,absolute_path))
 

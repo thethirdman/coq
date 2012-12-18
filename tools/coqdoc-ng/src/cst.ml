@@ -14,6 +14,12 @@ type code =  Keyword of string | Ident of string | Literal of string
             | Tactic of string
             | Symbol of string | NoFormat of string
             | Output_command of raw_content * string list
+            (** Type for hyperlinks:
+              * - A Root defines the destination of a link
+              * - A Link defines a reference to a root
+              *)
+            | Root of (string * string) (** name_to_show * reference *)
+            | Link of (string * string) (**FIXME: put code instead of string *)
 
 (** Describes a user-defined printing rule. This type handles both
  * printing and printing_command commands (differentiated with the
@@ -62,12 +68,6 @@ type 'a rec_element =
   [ `List of 'a list
   | `Item of 'a (* List items in coqdoc *)
   | `Emphasis of 'a
-  (** Type for hyperlinks:
-    * - A Root defines the destination of a link
-    * - A Link defines a reference to a root
-    *)
-  | `Root of ('a * string) (** name_to_show * reference *)
-  | `Link of ('a * string)
   (* Type for a sequence of doc elements: DO NOT CONFUSE WITH `List *)
   | `Seq of 'a list ]
 
