@@ -115,8 +115,10 @@ let _ =
      * string elements of an expression as being keywords or symbols.
      *)
     let keyword_nodes = [V_Fixpoint; V_CoFixpoint; V_Definition; V_Inductive;
-    V_Proof; V_Assumption; V_Solve; V_EndProof; V_CheckMayEval;
-    V_StartTheoremProof; C_CLetIn; C_CNotation; C_UnpTerminal; C_CProdN ] in
+    V_Proof; V_Assumption; V_Solve; V_EndProof; V_CheckMayEval; V_Require;
+    V_StartTheoremProof; C_CLetIn; C_CNotation; V_Notation; V_EndSegment;
+    V_BeginSection; C_UnpTerminal; C_CProdN; V_SyntacticDefinition;
+    ] in
     let node_generic = (fun fallback args ->
         List.flatten (List.map
           (function
