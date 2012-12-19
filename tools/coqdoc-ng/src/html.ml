@@ -59,6 +59,14 @@ let doc cst =
         (replace_newlines (print_no_eval cst))
     with Unhandled_case -> None
 
+let pr_link link_type link =
+  let normalize name = (List.nth name ((List.length name) -1)) in
+  match link_type with
+    | `Root ->
+      sprintf "<a id=\"%s\">%s</a>" (normalize link.adress) link.content
+    | `Link ->
+        sprintf "<a href=\"#%s\">%s</a>" (normalize link.adress) link.content
+
 let code c =
   let aux = function
   Keyword s ->   sprintf "<span class=\"id\" type=\"keyword\">%s</span>" s
@@ -67,8 +75,8 @@ let code c =
   | Tactic s -> sprintf  "<span class=\"id\" type=\"inductive\">%s</span>" s
   | Symbol s -> sprintf "<span class=\"id\" type=\"lemma\">%s</span>" s
   | NoFormat s -> s
-  | Root (a,b) -> sprintf "<a id=\"%s\">%s</a>" b a
-  | Link (a,b) -> sprintf "<a href=\"%s\">%s</a>" b a
+  | Root l -> pr_link `Root l
+  | Link l -> pr_link `Link l
   | Output_command (raw,[]) -> pr_raw raw
   | Output_command (raw,args) -> print_with_sep (pr_raw raw) args
   in (List.map replace_newlines (List.map aux c))

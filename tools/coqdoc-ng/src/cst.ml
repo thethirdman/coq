@@ -9,6 +9,14 @@ exception End_of_file
 type raw_content = { latex : string; latex_math : string; html : string;
                       default : string}
 
+(** This is the type of a link, it defines if it points to a reference
+ * inside the standard library of coq, its adress as a string list,
+ * and the content to be showed with this link *)
+type link =
+  {is_stdlib : bool;
+   adress : string list;
+   content : string;}
+
 (* Type for code elements *)
 type code =  Keyword of string | Ident of string | Literal of string
             | Tactic of string
@@ -18,8 +26,8 @@ type code =  Keyword of string | Ident of string | Literal of string
               * - A Root defines the destination of a link
               * - A Link defines a reference to a root
               *)
-            | Root of (string * string) (** name_to_show * reference *)
-            | Link of (string * string) (**FIXME: put code instead of string *)
+            | Root of link
+            | Link of link
 
 (** Describes a user-defined printing rule. This type handles both
  * printing and printing_command commands (differentiated with the
