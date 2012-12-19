@@ -45,7 +45,7 @@ let doc cst =
 
   let rec print_rec_element = function
     | `Emphasis d      -> (sprintf "<i>%s</i>" (print_no_eval d))
-    | `List lst        -> sprintf "<ul>\n%s\n</ul>"
+    | `List lst        -> sprintf "<ul>%s</ul>"
       (print_with_sep "" (List.map print_no_eval lst))
     | `Seq lst -> print_with_sep "" (List.map print_no_eval lst)
     | `Item doc -> sprintf "<li>%s</li>" (print_no_eval doc)

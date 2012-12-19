@@ -5,6 +5,7 @@
 - with utf8 option, forall must be unicode
 - splitting between symbols and ident should be correct in a' and c
 - ".." should be rendered correctly
+- _ test emphasis ! _
 *)
 
 Require Import String.

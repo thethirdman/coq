@@ -29,13 +29,6 @@ struct
   * which will be called when Formatter.doc does not implement a rule
   * for a cst node *)
 
-let is_empty outc cst =
-  let is_empty_str str = Str.string_match (Str.regexp "\\( \\|\n\\)*") str 0 in
-  match cst with
-  Cst.Code [Cst.NoFormat s]
-  | Cst.Doc (`Content s) -> if is_empty_str s then output_string outc s; true
-  |_ -> false
-
 let (context: [`None | `Code | `Doc] ref) = ref `None
 let handle_context outc tok =
   let open Formatter in
@@ -53,16 +46,19 @@ let handle_context outc tok =
       else "")
 
 let transform outc default_fun cst =
-  if is_empty outc cst then ()
-  else match cst with
-    Cst.Doc d -> handle_context outc `Doc;
-                begin match Formatter.doc d with
-                  None -> output_string outc (default_fun cst)
-                  | Some s -> output_string outc s
-                end
+  begin match cst with
+    Cst.Doc d ->
+      if d <> `Content "" then
+        begin handle_context outc `Doc;
+          match Formatter.doc d with
+            None -> output_string outc (default_fun cst)
+            | Some s -> output_string outc s;
+          output_string outc (Formatter.newline ())
+        end
     | Cst.Code c -> handle_context outc `Code;
-        List.iter (output_string outc) (Formatter.code c)
-    | _ -> assert false
+        List.iter (output_string outc) (Formatter.code c);
+        output_string outc (Formatter.newline ())
+    | _ -> assert false end
 
 let header outc = output_string outc (Formatter.header ())
 let footer outc = handle_context outc `None; output_string outc (Formatter.footer ())

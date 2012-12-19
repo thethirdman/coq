@@ -79,14 +79,14 @@ rule lex_doc = parse
 
     (** List matching: if a line starts with a '-', then it is an element of a
      * list *)
-  | nl (sp* as lvl) "- " {get_flush ();
+  | nl (sp* as lvl) "- " {Buffer.add_char buff '\n'; get_flush ();
     let depth = String.length lvl in
     if depth > (get_lvl ()) then (* New sublist *)
       (Queue.push (LST depth) tokens; Queue.push ITEM tokens;
       push depth;
       Queue.pop tokens)
-      else if depth < (get_lvl ()) then (* End of sublist *)
-        (Queue.push ENDLST tokens;
+    else if depth < (get_lvl ()) then (* End of sublist *)
+      (Queue.push ENDLST tokens;
       Queue.push ITEM tokens;
       pop ();
       Queue.pop tokens)

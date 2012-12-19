@@ -17,6 +17,8 @@ o 0.1: Squelette
           -> remove `Seq type
       FIXME:
         - printing des liens avec des raw_doc dedans
+        - mettre opt_map et string_forall dans lib/
+        - debug dans links.v: après une liste, (un|des) sauts de lignes en trop
 [TODO]
 o 0.1: Version préliminaire
       -> Possède juste la traduction .v -> .html

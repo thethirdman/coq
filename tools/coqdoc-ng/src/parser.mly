@@ -63,11 +63,10 @@ parse_seq:
     {`Emphasis (`Seq lst)}
   | LST lst=list(parse_lst) ENDLST
     {`List lst}
+
 (** Function for parsing documentation lists *)
 parse_lst:
-| LST lst=list(parse_lst) ENDLST
-  {`List lst}
-| ITEM c=list(parse_term)
+| ITEM c=list(parse_seq)
   {`Item  (`Seq c) }
 
 (* Basic elements of documentation strings *)
