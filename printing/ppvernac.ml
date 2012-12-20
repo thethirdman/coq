@@ -562,7 +562,7 @@ let rec pr_vernac = function
       str "Scope" ++ spc() ++ str sc)
   | VernacDelimiters (sc,key) ->
       tag V_Delimiters (str"Delimit Scope" ++ spc () ++ str sc ++
-      spc() ++ str "with " )++ str key
+      spc() ++ str "with " ++ str key)
   | VernacBindScope (sc,cll) ->
       tag V_BindScope (str"Bind Scope" ++ spc () ++ str sc ++
       spc() ++ str "with " ++ prlist_with_sep spc pr_smart_global cll)

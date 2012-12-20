@@ -74,7 +74,8 @@ let rec eval_rec_element = function
 and eval_eval_element = function
   | `Add_printing pr -> Annotations.add_printing_rule pr; None
   | `Rm_printing elt -> Annotations.rm_printing_rule elt; None
-  | `Query (name,arg_lst) -> Some (`Content "") (** FIXME: replace with eval_query *)
+  | `Query (name,arg_lst) ->
+      Some (`Content ("@" ^ name ^ "{" ^ (String.concat "," arg_lst) ^ "}")) (** FIXME: replace with eval_query *)
 
 and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
   #Cst.flat_element as q -> Some q
