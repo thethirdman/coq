@@ -114,7 +114,6 @@ let load_input_document fname = try {
 
 let load_output_document fname =
   try
-    print_endline "LOADING";
     let doc = {document_type = OHTML (* FIXME *);
                document_filename = Named fname;
                document_channel = open_out fname;} in

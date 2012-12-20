@@ -67,8 +67,19 @@ let pr_link link_type link =
     | `Link ->
         sprintf "<a href=\"#%s\">%s</a>" (normalize link.adress) link.content
 
+let indent id_lvl =
+  let str = "&nbsp;" and tab_size = 4 and ret = ref "" in
+  if id_lvl = 0 then ""
+  else
+    begin
+      for i = 1 to tab_size * id_lvl do
+        ret := str ^ !ret
+      done;
+    !ret
+    end
+
 let code c =
-  let aux = function
+  let rec aux = function
   Keyword s ->   sprintf "<span class=\"id\" type=\"keyword\">%s</span>" s
   | Ident s ->   sprintf "<span class=\"id\" type=\"var\">%s</span>" s
   | Literal s -> sprintf "<span class=\"id\" type=\"var\">%s</span>" s
@@ -79,6 +90,7 @@ let code c =
   | Link l -> pr_link `Link l
   | Output_command (raw,[]) -> pr_raw raw
   | Output_command (raw,args) -> print_with_sep (pr_raw raw) args
+  | Indent (size,code) -> (indent size) ^ (aux code)
   in (List.map replace_newlines (List.map aux c))
 
 let begindoc ()  = "<div class=\"doc\">"
@@ -87,7 +99,6 @@ let begincode () = "<div class=\"code\">"
 let endcode ()   = "</div>"
 
 (* FIXME: make real function *)
-let indent n = " "
 
 let newline () = "<br />"
 

@@ -33,8 +33,6 @@ type annot =
  *)
 let annot_of_vernac ct vernac_string =
   let pp_output = Coqtop.handle_value (Coqtop.prettyprint ct vernac_string) in
-  print_endline pp_output;
-
   (** We encapsulate the response string into a tag in order to parse
    * the full xml hierarchy *)
   let xml_parser = Xml_parser.make (Xml_parser.SString ("<xml>" ^ pp_output ^ "</xml>")) in
@@ -83,15 +81,61 @@ let add_rule tag f =
     Hashtbl.replace code_rules tag (f fallback)
   with Not_found -> Hashtbl.add code_rules tag (f (fun _ -> raise Not_found))
 
+
+(** This functions indents multilines expression:
+  * after having computed the indentation level of a sentence, the rest of the
+  * each line of the sentence must be indented *)
+let indent_newline depth lst =
+  let gen_split constructor str =
+      let split_exp = Str.full_split (Str.regexp "\n") str in
+      let rec aux = function
+      | [] -> []
+      | [Str.Text s] -> [constructor s]
+      | (Str.Delim _)::(Str.Text s)::l ->
+        (constructor "\n")::(Cst.Indent (depth + 1, (constructor s)))::(aux l)
+      | e::l -> (aux l) in
+    aux split_exp in
+  let indent_code = function
+    | Cst.Keyword str -> gen_split (fun s -> Cst.Keyword s) str
+    | Cst.Ident str -> gen_split (fun s -> Cst.Ident s) str
+    | Cst.Literal str -> gen_split (fun s -> Cst.Literal s) str
+    | Cst.Tactic str -> gen_split (fun s -> Cst.Tactic s) str
+    | Cst.Symbol str -> gen_split (fun s -> Cst.Symbol s) str
+    | Cst.NoFormat str -> gen_split (fun s -> Cst.NoFormat s) str
+    | other -> [other] in
+  List.flatten (List.map indent_code lst)
+
+(** This function handle the indentation of the code (because the xml_protocol
+ * can't), some xml tags describe the opening of a new block, making a new
+ * level of indentation, while others close the block, reducing the indentation
+ *)
+let indent =
+  let open Xml_pp in let open Cst in
+  let id_lvl = ref 0 in
+  (fun node code_lst ->
+  let aux node code = match node with
+    | V_BeginSection ->
+      let ret = Indent (!id_lvl,code) in incr id_lvl; ret
+    | V_EndSegment ->
+        decr id_lvl; Indent (!id_lvl,code)
+    |_ -> Indent (!id_lvl,code) in
+  match code_lst with
+  [] -> []
+  | e::l -> (aux node e)::(indent_newline (!id_lvl + 1) l))
+
+
 (** This function handle the calling of the rules in order to do the
-  * translation from annot to doc. It returns a Cst.doc_with_eval
+  * translation from annot to doc. It returns a code list
   *)
-let rec doc_of_annot annot =
-  match annot with
-       | AString s -> [Cst.NoFormat s]
-       | ATag (node, values) ->
-           try ((Hashtbl.find code_rules node) values)
-           with Not_found -> List.flatten (List.map doc_of_annot values)
+let rec doc_of_annot = function
+  | AString s -> [Cst.NoFormat s]
+  | ATag (node, values) ->
+      try ((Hashtbl.find code_rules node) values)
+      with Not_found -> List.flatten (List.map doc_of_annot values)
+
+let id_annotate = function
+   | (AString _) as s -> doc_of_annot s
+   | (ATag (node, _)) as tag -> indent node (doc_of_annot tag)
 
 (** Utility: string -> Cst.code
   * This function is used when we want to distinguish simple strings
@@ -118,6 +162,7 @@ let _ =
     V_Proof; V_Assumption; V_Solve; V_EndProof; V_CheckMayEval; V_Require;
     V_StartTheoremProof; C_CLetIn; C_CNotation; V_Notation; V_EndSegment;
     V_BeginSection; C_UnpTerminal; C_CProdN; V_SyntacticDefinition;
+    V_Delimiters;
     ] in
     let node_generic = (fun fallback args ->
         List.flatten (List.map
@@ -226,7 +271,7 @@ let doc_of_vernac ct code =
   let ret =
     (try
       let annot_lst = annot_of_vernac ct code in
-        List.flatten (List.map doc_of_annot annot_lst)
+        List.flatten (List.map id_annotate annot_lst)
     with Invalid_argument s -> print_endline s;
       [maybe_symbol (fun e -> Cst.NoFormat e) code])
       in ret

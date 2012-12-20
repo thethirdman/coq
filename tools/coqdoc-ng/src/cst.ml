@@ -18,16 +18,23 @@ type link =
    content : string;}
 
 (* Type for code elements *)
-type code =  Keyword of string | Ident of string | Literal of string
-            | Tactic of string
-            | Symbol of string | NoFormat of string
-            | Output_command of raw_content * string list
-            (** Type for hyperlinks:
-              * - A Root defines the destination of a link
-              * - A Link defines a reference to a root
-              *)
-            | Root of link
-            | Link of link
+type code =
+  | Keyword of string | Ident of string | Literal of string
+  | Tactic of string  | Symbol of string | NoFormat of string
+  (** This is an output specific command: the idea is to generate a
+   * command call inside the generated document.  The first element
+   * is the command to call; The second element is the list of
+   * arguments given to this command. Each backend should implement
+   * its way to output commands *)
+  | Output_command of raw_content * string list
+  (** Type for hyperlinks:
+    * - A Root defines the destination of a link
+    * - A Link defines a reference to a root
+    *)
+  | Root of link
+  | Link of link
+  (* This describes the level of indentation for a piece of code *)
+  | Indent of int * code
 
 (** Describes a user-defined printing rule. This type handles both
  * printing and printing_command commands (differentiated with the
@@ -51,12 +58,6 @@ type flat_element =
   | `Raw of raw_content
   | `Verbatim of string
   | `Content of string
-  (** This is an output specific command: the idea is to generate a command
-   * call inside the generated document.
-   * The first element is the command to call; The second element is the list
-   * of arguments given to this command. Each backend should implement its
-   * way to output commands *)
-  (* Type for formatted code output: list of code elements *)
   ]
 
 (** This type contains all the elements that will be evaluated.

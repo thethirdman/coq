@@ -8,6 +8,48 @@
 let initialize () =
   Settings.parse ()
 
+let vernac_parser =
+  (MenhirLib.Convert.Simplified.traditional2revised Parser.parse_vernac)
+
+let doc_parser str =
+    (Parser.parse_doc Doc_lexer.lex_doc (Lexing.from_string str))
+
+
+(** This function checks if the string is a full vernac sentence (which
+ * is terminated by a . *)
+let finished_sentence str = (String.get str (String.length str - 2)) = '.'
+
+(** This function handles multi-line vernac sentences.
+ * It makes sure that every Cst.Code is a full Vernac expression *)
+let merge_code =
+  let code_buff = Buffer.create 100 in
+  (fun code lst ->
+    if finished_sentence code then
+      begin
+        let sentence = (Buffer.contents code_buff) ^ code in
+        let ret = (Cst.make_cst doc_parser (Cst.Code sentence)) in
+        Buffer.clear code_buff;
+        ret::lst
+      end
+  else
+    begin
+      print_endline ("unfinished: \""^code^"\"");
+      Buffer.add_string code_buff code;
+      lst
+    end)
+
+(* This function generates a cst from an input channel *)
+let cst_of_input inp =
+  let lst = ref [] in
+  try
+    while true do
+      let ret = vernac_parser (Vernac_lexer.lex (Settings.input_channel inp)) in
+      match ret with
+      | Cst.Code c -> lst := (merge_code c !lst)
+      | _ -> lst := (Cst.make_cst doc_parser ret)::!lst
+    done; assert false
+  with Cst.End_of_file -> (List.rev !lst)
+
 (** The role of the frontend is to translate a set of input documents
     written in plenty of formats into a common format that we call
     Vdoc.
@@ -15,24 +57,9 @@ let initialize () =
     A Vdoc is a "glueing" document composed of two things: (i) fragments of
     documents written the initial input format ; (ii) requests to coqtop.
 *)
-let cst_of_input =
-  (MenhirLib.Convert.Simplified.traditional2revised Parser.parse_vernac)
-
-let doc_from_string str =
-    (Parser.parse_doc Doc_lexer.lex_doc (Lexing.from_string str))
-
 let frontend () = match Settings.input_type () with
     | Settings.IVernac ->
-        let vdoc_of_input inp =
-          let lst = ref [] in
-          try
-            while true do
-              let ret = cst_of_input (Vernac_lexer.lex (Settings.input_channel inp)) in
-              let cst = Cst.make_cst doc_from_string ret in
-              lst := cst::!lst;
-            done; assert false
-          with Cst.End_of_file -> (List.rev !lst) in
-      List.flatten (List.map vdoc_of_input (Settings.input_documents ()))
+        List.flatten (List.map cst_of_input (Settings.input_documents ()))
     | Settings.ICoqTeX -> assert false (* FIXME: Not implemented yet. *)
     | Settings.IHTML   -> assert false (* FIXME: Not implemented yet. *)
 
