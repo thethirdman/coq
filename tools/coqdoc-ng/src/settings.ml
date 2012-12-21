@@ -57,7 +57,7 @@ let string_of_backend_type = function
   | OPrettyPrint -> "standalone text document"
 
 (** Documents are transmitted through standard UNIX channels. *)
-type filename = Anonymous | Named of string
+type filename = Anonymous | Named of string | Directory of string
 
 type ('io, 'io_type) document = {
   mutable document_filename : filename;
@@ -104,21 +104,36 @@ let extension_of_filename fname =
     (Str.string_after fname off)
   with Not_found -> "(no extension)"
 
-let load_input_document fname = try {
-  document_filename = Named fname;
-  document_channel  = open_in fname;
-  document_type     = frontend_type_of_extension (extension_of_filename fname)
-} with (Sys_error _) as e ->
+let load_input_document fname =
+  if Sys.is_directory fname then
+    {document_filename = Directory fname;
+      document_channel = stdin; (** default value *)
+      document_type = IVernac;}
+  else
+    try {
+      document_filename = Named fname;
+      document_channel  = open_in fname;
+      document_type     = frontend_type_of_extension (extension_of_filename fname)
+    } with (Sys_error _) as e ->
   (* FIXME: Use a standardize way of raising fatal errors. *)
   raise e
 
 let load_output_document fname =
-  try
-    let doc = {document_type = OHTML (* FIXME *);
+  if Sys.file_exists fname then
+    if Sys.is_directory fname then
+      let doc = {document_type = OHTML;
+              document_filename = Directory fname;
+              document_channel = stdout;} in (** default value *)
+      io.output <- doc
+    else
+    try
+      let doc = {document_type = OHTML (* FIXME *);
                document_filename = Named fname;
                document_channel = open_out fname;} in
-    io.output <- doc;
+      io.output <- doc
   with (Sys_error _) as e -> raise e
+  else
+    raise (Invalid_argument ("File does not exists: " ^ fname))
 
 let load_input_document fname =
   io.input <- (load_input_document fname) :: io.input
@@ -162,7 +177,7 @@ let print_help_if_required () =
 (** Load requested inputs. *)
 let parse_anon = function
   | s when Sys.file_exists s ->
-    load_input_document s
+        load_input_document s
   | x ->
     raise (Arg.Bad ("Invalid argument: " ^ x))
 
@@ -176,7 +191,7 @@ let check_settings_consistency () =
       extension must coincide. *)
   and check_output_extension_consistency () =
     match io.output.document_filename with
-      | Anonymous ->
+      | Anonymous | Directory _ ->
 	(** If no filename is specified, we are good. *)
 	()
       | Named filename ->
@@ -217,11 +232,44 @@ let check_settings_consistency () =
   in
   check ()
 
+(** This function does the final computations after the command line is
+ * parsed. This is a necessary step because:
+ *  - If no input file is specified, we want to set a default input
+ *  - We want to generate the list of file when a Directory type is given
+ *  both in input and output
+ *)
+let check_input_output () =
+  if io.input = [] then io.input <- [default_input]
+  else
+    io.input <- List.fold_left (fun acc file ->
+      match file.document_filename with
+      | Directory dirname ->
+          begin
+            (** We read the files in the directory *)
+            let new_files = ref [] in
+            let files = Sys.readdir dirname in
+            for i = 0 to Array.length files - 1 do
+              let cur_file = files.(i) in
+              let ext = extension_of_frontend_type io.input_type in
+              (** For each file in the dir, if it has a good extension *)
+              if (ext = (extension_of_filename cur_file))
+                && not (Sys.is_directory cur_file) then
+                  new_files :=
+                    {document_filename = Named cur_file;
+                     document_channel = open_in cur_file;
+                     document_type = io.input_type;}
+                    ::!new_files
+            done;
+            (** We add the list of new files in the list, replacing the
+             * directory *)
+            (!new_files)@acc
+          end
+      | _ -> file::acc) [] io.input
+
 (** Parses the command line and sets up the variables. *)
 let parse () =
   Arg.parse speclist parse_anon usage;
-  (** If no input files are given, then we read stdin *)
-  if io.input = [] then io.input <- [default_input];
+  check_input_output ();
   print_help_if_required ();
   check_settings_consistency ()
 
@@ -234,3 +282,22 @@ let output_document () = io.output
 let output_filename o  = o.document_filename
 let output_channel o   = o.document_channel
 let output_type o      = o.document_type
+
+(* This function forges a new output file from a given input file *)
+(* Its main use it when coqdoc has to manage a set of input
+ * files, and an output directory *)
+let make_output_from_input dirname input_file =
+  let out_document = Settings.output_document () in
+  (** We first get the input filename (without file hierarchy not extension) *)
+  let input_fname =  match Settings.input_filename input_file with
+    | Settings.Named s -> Filename.chop_extension (Filename.basename s)
+    |_ -> assert false in
+  (** We then generate the output_filename *)
+  let output_name = dirname ^ "/" ^ input_fname ^
+    Settings.extension_of_backend_type (Settings.output_type out_document) in
+
+  (** We finally create the output type *)
+  {Settings.document_type = Settings.output_type out_document;
+   Settings.document_filename = Settings.Named output_name;
+   Settings.document_channel = open_out output_name;}
+

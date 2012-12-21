@@ -8,48 +8,6 @@
 let initialize () =
   Settings.parse ()
 
-let vernac_parser =
-  (MenhirLib.Convert.Simplified.traditional2revised Parser.parse_vernac)
-
-let doc_parser str =
-    (Parser.parse_doc Doc_lexer.lex_doc (Lexing.from_string str))
-
-
-(** This function checks if the string is a full vernac sentence (which
- * is terminated by a . *)
-let finished_sentence str = (String.get str (String.length str - 2)) = '.'
-
-(** This function handles multi-line vernac sentences.
- * It makes sure that every Cst.Code is a full Vernac expression *)
-let merge_code =
-  let code_buff = Buffer.create 100 in
-  (fun code lst ->
-    if finished_sentence code then
-      begin
-        let sentence = (Buffer.contents code_buff) ^ code in
-        let ret = (Cst.make_cst doc_parser (Cst.Code sentence)) in
-        Buffer.clear code_buff;
-        ret::lst
-      end
-  else
-    begin
-      print_endline ("unfinished: \""^code^"\"");
-      Buffer.add_string code_buff code;
-      lst
-    end)
-
-(* This function generates a cst from an input channel *)
-let cst_of_input inp =
-  let lst = ref [] in
-  try
-    while true do
-      let ret = vernac_parser (Vernac_lexer.lex (Settings.input_channel inp)) in
-      match ret with
-      | Cst.Code c -> lst := (merge_code c !lst)
-      | _ -> lst := (Cst.make_cst doc_parser ret)::!lst
-    done; assert false
-  with Cst.End_of_file -> (List.rev !lst)
-
 (** The role of the frontend is to translate a set of input documents
     written in plenty of formats into a common format that we call
     Vdoc.
@@ -57,9 +15,37 @@ let cst_of_input inp =
     A Vdoc is a "glueing" document composed of two things: (i) fragments of
     documents written the initial input format ; (ii) requests to coqtop.
 *)
+
+(** This is the first parser: it makes a logical separation between code,
+ * comments and documentation.
+ * A different evaluation will be applied on each of those types *)
+let vernac_parser =
+  (MenhirLib.Convert.Simplified.traditional2revised Parser.parse_vernac)
+
+(** The second parser parses the documentation into a abstract representation
+ *)
+let doc_parser str =
+    (Parser.parse_doc Doc_lexer.lex_doc (Lexing.from_string str))
+
+
+(* This function generates a cst from an vernac file's input channel.
+ * It first calls the vernac parser, and then calls the make_cst function
+ * which parses the doc features and makes sure that every code feature
+ * is a complete sentence *)
+let cst_of_vernac_input inp =
+  let lst = ref [] in
+  try
+    while true do
+      let ret = vernac_parser (Vernac_lexer.lex (Settings.input_channel inp)) in
+      match (Cst.make_cst doc_parser ret) with
+      | Some element -> lst := element::!lst
+      | None -> ()
+    done; assert false
+  with Cst.End_of_file -> (List.rev !lst)
+
 let frontend () = match Settings.input_type () with
     | Settings.IVernac ->
-        List.flatten (List.map cst_of_input (Settings.input_documents ()))
+        (List.map cst_of_vernac_input (Settings.input_documents ()))
     | Settings.ICoqTeX -> assert false (* FIXME: Not implemented yet. *)
     | Settings.IHTML   -> assert false (* FIXME: Not implemented yet. *)
 
@@ -73,13 +59,13 @@ let frontend () = match Settings.input_type () with
 *)
 open Coqtop_handle
 
-let resolve_coqtop_interaction inputs =
-  (** Initialize a communication layer with a coqtop instance. *)
-  let _ct = Coqtop.spawn [] in
-  (** Resolve every requests from inputs. *)
-  let ret =List.map
-    (fun inp -> Evaluate.eval_cst _ct (Settings.input_type ()) inp) inputs in
-  Coqtop.kill_ct _ct; ret
+let resolve_coqtop_interaction _ct inputs =
+  (** For each input, we evaluate the cst list (a sequence of cst's) *)
+  print_int (List.length inputs); print_newline ();
+  List.map (fun input -> print_endline "plop";
+    List.map (fun cst -> Evaluate.eval_cst _ct (Settings.input_type ()) cst)
+    input)
+    inputs
 
 (** The role of the backend is to produce the final set of documents.
 
@@ -90,21 +76,20 @@ let resolve_coqtop_interaction inputs =
     input one) and in pretty printing the coqtop answers into the
     output format.
 *)
+
 let backend resolved_inputs =
-  match Settings.output_type (Settings.output_document ()) with
-  | Settings.OHTML ->
-      let module Backend = Vdoc.Backend(Html) in
-      let outc = Settings.output_channel (Settings.output_document ()) in
-      let print = Backend.transform outc (fun s -> "fixme") in
-      Backend.header outc;
-      List.iter print resolved_inputs;
-      Backend.footer outc
-  | Settings.OLaTeX -> assert false
-  | Settings.OPrettyPrint -> assert false
+    match Settings.output_type (Settings.output_document ()) with
+    | Settings.OHTML -> let module Out = Vdoc.Backend(Html) in
+      Out.generate_doc resolved_inputs
+    | Settings.OLaTeX -> assert false
+    | Settings.OPrettyPrint -> assert false
 
 (** Coqdoc is a composition of the passes described below. *)
 let coqdoc =
   initialize ();
+  (** Initialize a communication layer with a coqtop instance. *)
   let inputs          = frontend () in
-  let resolved_inputs = resolve_coqtop_interaction inputs in
-  backend resolved_inputs
+  let _ct = Coqtop.spawn [] in
+  let resolved_inputs = resolve_coqtop_interaction _ct inputs in
+  Coqtop.kill_ct _ct;
+  backend resolved_inputs;

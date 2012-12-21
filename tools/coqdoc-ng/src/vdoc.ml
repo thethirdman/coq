@@ -60,6 +60,33 @@ let transform outc default_fun cst =
         output_string outc (Formatter.newline ())
     | _ -> assert false end
 
-let header outc = output_string outc (Formatter.header ())
-let footer outc = handle_context outc `None; output_string outc (Formatter.footer ())
+
+
+(** This function prints into an output file a vdoc *)
+let rec write_file output cst_list =
+    let outc = Settings.output_channel output in
+    let print = transform outc (fun s -> "fixme") in
+    output_string outc (Formatter.header ());
+    List.iter print cst_list;
+    output_string outc (Formatter.footer ())
+
+(** When the output is a directory, we generate the set of output files
+ * based on each input file, and then we use write_file *)
+let write_dir dirname resolved_inputs =
+  let aux input_file cst_lst =
+    let output_file = Settings.make_output_from_input dirname input_file in
+    write_file output_file cst_lst in
+
+  List.iter2 aux (Settings.input_documents ()) resolved_inputs
+
+(** This function handle the generation of the documentation
+ * from a list of Cst. For each output file, the associated list of cst
+ * is translated into the output language *)
+let generate_doc resolved_inputs =
+  let out_document = Settings.output_document () in
+  match Settings.output_filename out_document with
+  | Settings.Directory dirname -> write_dir dirname resolved_inputs
+  | other -> write_file (Settings.output_document ()) (List.flatten
+  resolved_inputs)
+
 end

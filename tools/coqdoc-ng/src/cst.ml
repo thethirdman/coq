@@ -97,8 +97,31 @@ type ('a,'b) cst_node =
 
 type ('a,'b) cst = (('a,'b) cst_node) list
 
-(* Converts source and doc types into the common type cst *)
+
+(** This function checks if the string is a full vernac sentence (which
+ * is terminated by a . *)
+let finished_sentence str = (String.get str (String.length str - 2)) = '.'
+
+(** This function handles multi-line vernac sentences.
+ * It makes sure that every Cst.Code is a full Vernac expression *)
+let merge_code =
+  let code_buff = Buffer.create 100 in
+  (fun code ->
+    if finished_sentence code then
+      let sentence = (Buffer.contents code_buff) ^ code in
+      Buffer.clear code_buff;
+      Some (Code sentence)
+    else
+    begin
+      print_endline ("unfinished: \""^code^"\"");
+      Buffer.add_string code_buff code;
+      None
+    end)
+
+(* This function calls converters the doc string from the first parsing
+ * phase into the abstract representation of type doc.
+ * It also merge the code lines into full sentences *)
 let make_cst (doc_converter:string -> doc_with_eval) = function
-  | Doc d -> Doc (doc_converter d)
-  | Comment s -> Comment s
-  | Code s -> Code s
+  | Doc d -> Some (Doc (doc_converter d))
+  | Comment s -> Some (Comment s)
+  | Code s -> merge_code s
