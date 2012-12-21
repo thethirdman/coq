@@ -11,7 +11,7 @@ module Backend =
   functor (Formatter :
     sig
       val initialize : unit    -> unit
-      val header     : unit    -> string
+      val header     : string -> string
       val doc        : Cst.doc_no_eval -> string option
       val begindoc   : unit -> string
       val enddoc     : unit -> string
@@ -20,7 +20,8 @@ module Backend =
       val endcode    : unit -> string
       val indent     : int     -> string (*FIXME: not used right now*)
       val newline    : unit    -> string (*FIXME: idem *)
-      val index      : 'a list -> string
+      val index      : link list -> string
+      val file_index : (string*string) list -> string
       val footer     : unit    -> string
     end) ->
 struct
@@ -60,22 +61,28 @@ let transform outc default_fun cst =
         output_string outc (Formatter.newline ())
     | _ -> assert false end
 
-
-
 (** This function prints into an output file a vdoc *)
-let rec write_file output cst_list =
+let rec write_file mod_name output cst_list =
     let outc = Settings.output_channel output in
-    let print = transform outc (fun s -> "fixme") in
-    output_string outc (Formatter.header ());
-    List.iter print cst_list;
-    output_string outc (Formatter.footer ())
+    let pr_doc = transform outc (fun s -> "fixme") in
+    let print = output_string outc in
+    print (Formatter.header mod_name);
+    List.iter pr_doc cst_list;
+    handle_context outc `None;
+    print (Formatter.index (List.map Hyperlinks.link_of_symbol
+      (Hyperlinks.get_id_of_module mod_name)));
+    print (Formatter.file_index
+      (List.map (fun file -> match Settings.input_filename file with
+          Settings.Named s -> (s,mod_name)
+          |_ -> assert false) (Settings.input_documents ())));
+    print (Formatter.footer ())
 
 (** When the output is a directory, we generate the set of output files
  * based on each input file, and then we use write_file *)
 let write_dir dirname resolved_inputs =
   let aux input_file cst_lst =
     let output_file = Settings.make_output_from_input dirname input_file in
-    write_file output_file cst_lst in
+    write_file (Settings.module_of_input input_file) output_file cst_lst in
 
   List.iter2 aux (Settings.input_documents ()) resolved_inputs
 
@@ -86,7 +93,8 @@ let generate_doc resolved_inputs =
   let out_document = Settings.output_document () in
   match Settings.output_filename out_document with
   | Settings.Directory dirname -> write_dir dirname resolved_inputs
-  | other -> write_file (Settings.output_document ()) (List.flatten
-  resolved_inputs)
+  | other ->
+      write_file (List.hd (Settings.modules_of_input_documents ()))
+        (Settings.output_document ()) (List.flatten resolved_inputs)
 
 end

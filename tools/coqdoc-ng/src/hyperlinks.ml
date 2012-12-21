@@ -6,19 +6,64 @@
 open Coqtop_handle
 open Cst
 
-(** This hashtable stores all the declared identifiers inside a "project"
- * (i.e a set of files from which the documentation is generated)
- *)
-let id_index = Hashtbl.create 42
+module Symbol = struct
+  type t = string list
 
-(** We want to check if a link points to coq's standard library, because
- * it implies a special treatment on the backend side *)
-let is_stdlib str =
-  (String.length str > 3) && ((String.compare (String.sub str 0 3) "Coq") = 0)
+  let compare sym1 sym2 = match sym1,sym2 with
+    | [],[] -> 0
+    | e1::l1, [] -> String.compare e1 ""
+    | [], e2::l2 -> String.compare "" e2
+    | e1::l1, e2::l2 ->
+        let ret = String.compare e1 e2 in
+        if ret = 0 then
+          compare l1 l2
+        else
+          ret
 
-let make_path = Str.split (Str.regexp "\\.")
+   (** Make a Symbol.t from a string *)
+   let make str = Str.split (Str.regexp "\\.") str
 
-(** FIXME: function name
+   (** Checks wheter a given symbol is located in coq's standard library *)
+   let is_stdlib = function
+     | e::l when (String.compare e "Coq") = 0 -> true
+     |_ -> false
+end
+
+module Symbol_set = Set.Make(Symbol)
+
+let link_of_symbol sym =
+  let rec aux = function
+    [] -> assert false
+    | [e] -> e
+    | e::l -> aux l in
+  let open Cst in
+  {is_stdlib = Symbol.is_stdlib sym;
+   adress = sym;
+   content = aux sym;}
+
+(** This set stores the identifiers declared in the different modules of
+ * coqtop *)
+
+let symbol_table = ref (Symbol_set.empty)
+
+let add_symbol symbol =
+  let symbol = match symbol with "Top"::l -> l | other -> other in
+  symbol_table := Symbol_set.add symbol !symbol_table
+
+(**let find_symbol symbol =
+  try
+    Some (Symbol.choose symbol !symbol_table)
+  with Not_found -> None*)
+
+(** Returns the list of identifiers from a given module *)
+let get_id_of_module namespace =
+  let filter_fun = function
+     | e::l when (String.compare e namespace) = 0 -> true
+     |_ -> false in
+  let subset = Symbol_set.filter filter_fun !symbol_table in
+  Symbol_set.elements subset
+
+(**
  * This function takes a string and tries to find the corresponding identifier
  * in the project.
  * It returns an option type containing a Cst.link type if a reference has
@@ -33,22 +78,19 @@ let make_hyperlink ct id_str =
   match loc_info with
   | None -> None (* no reference has been found *)
   | Some absolute_path ->
-      try (* The id already exists in id_index, we return a link *)
-        Hashtbl.find id_index absolute_path;
+      let sym = Symbol.make absolute_path in
+      if Symbol_set.mem sym !symbol_table then
+      (* The id already exists in id_index, we return a link *)
         Some (Link
-            {is_stdlib = is_stdlib absolute_path;
-             adress = make_path absolute_path;
+            {is_stdlib = Symbol.is_stdlib sym;
+             adress = sym;
              content = id_str;})
-      with Not_found -> (* The id has just been declared *)
-        let is_stdlib = is_stdlib absolute_path in
-        if not is_stdlib then
-          begin
-            Hashtbl.add id_index absolute_path ();
-            Some (Root
-              {is_stdlib = is_stdlib;
-               adress = make_path absolute_path;
+      else (* The id has just been declared *)
+        begin
+          add_symbol sym;
+          Some (Root
+              {is_stdlib = Symbol.is_stdlib sym;
+               adress = sym;
                content = id_str;})
-          end
-        else
-          None
+        end
 

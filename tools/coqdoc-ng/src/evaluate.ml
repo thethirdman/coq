@@ -53,23 +53,12 @@ let handle_code ct i_type code =
   else
     [Cst.NoFormat code]
 
-
-
-
-
-
-(** Utility function: only inserts into the output list that are <> None *)
-let opt_map f lst = List.fold_right
-  (fun elt acc -> match f elt with
-    None -> acc
-      | Some result -> result::acc) lst []
-
 (* Evaluates the queries of an ast *)
 let rec eval_rec_element = function
-    `List doclst     -> `List (opt_map eval_doc doclst)
+    `List doclst     -> `List (Utils.opt_map eval_doc doclst)
     | `Item d   -> `Item (eval_full_doc d)
     | `Emphasis d    -> `Emphasis (eval_full_doc d)
-    | `Seq doc_lst   -> `Seq (opt_map eval_doc doc_lst)
+    | `Seq doc_lst   -> `Seq (Utils.opt_map eval_doc doc_lst)
 
 and eval_eval_element = function
   | `Add_printing pr -> Annotations.add_printing_rule pr; None
@@ -83,7 +72,7 @@ and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
   | #Cst.eval_element as e -> eval_eval_element e
 
 and eval_full_doc cst =
-  match opt_map eval_doc [cst] with
+  match Utils.opt_map eval_doc [cst] with
   [elt] -> elt
   |_ -> `Content ""
 
@@ -103,3 +92,11 @@ let eval_cst ct i_type = function
             | "end","hide"   -> (fst code_show) := (snd code_show)
             | (a,b) -> raise (Invalid_argument ("when treating " ^ a ^ " " ^ b))
           end; Cst.Doc (`Content "")
+
+let open_coq_module ct mod_name =
+  let command = "Module " ^ mod_name ^ "." in
+  ignore (Coqtop.interp ct Coqtop.null_logger command)
+
+let close_coq_module ct mod_name =
+  let command = "End  " ^ mod_name ^ "." in
+  ignore (Coqtop.interp ct Coqtop.null_logger command)

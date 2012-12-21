@@ -57,15 +57,16 @@ let frontend () = match Settings.input_type () with
     These answers are written in a generic format (the subset of the Vdoc
     format that represents coqtop answers, typically an XML-like document).
 *)
-open Coqtop_handle
-
 let resolve_coqtop_interaction _ct inputs =
   (** For each input, we evaluate the cst list (a sequence of cst's) *)
-  print_int (List.length inputs); print_newline ();
-  List.map (fun input -> print_endline "plop";
-    List.map (fun cst -> Evaluate.eval_cst _ct (Settings.input_type ()) cst)
-    input)
-    inputs
+
+  List.map2
+  (fun mod_name input ->
+    Evaluate.open_coq_module _ct mod_name;
+    let ret = List.map
+      (fun cst -> Evaluate.eval_cst _ct (Settings.input_type ()) cst) input in
+    Evaluate.close_coq_module _ct mod_name; ret)
+  (Settings.modules_of_input_documents ()) inputs
 
 (** The role of the backend is to produce the final set of documents.
 
@@ -84,6 +85,7 @@ let backend resolved_inputs =
     | Settings.OLaTeX -> assert false
     | Settings.OPrettyPrint -> assert false
 
+open Coqtop_handle
 (** Coqdoc is a composition of the passes described below. *)
 let coqdoc =
   initialize ();

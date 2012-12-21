@@ -287,17 +287,24 @@ let output_type o      = o.document_type
 (* Its main use it when coqdoc has to manage a set of input
  * files, and an output directory *)
 let make_output_from_input dirname input_file =
-  let out_document = Settings.output_document () in
   (** We first get the input filename (without file hierarchy not extension) *)
-  let input_fname =  match Settings.input_filename input_file with
-    | Settings.Named s -> Filename.chop_extension (Filename.basename s)
+  let input_fname =  match input_file.document_filename with
+    | Named s -> Filename.chop_extension (Filename.basename s)
     |_ -> assert false in
   (** We then generate the output_filename *)
   let output_name = dirname ^ "/" ^ input_fname ^
-    Settings.extension_of_backend_type (Settings.output_type out_document) in
+    extension_of_backend_type (output_type io.output) in
 
   (** We finally create the output type *)
-  {Settings.document_type = Settings.output_type out_document;
-   Settings.document_filename = Settings.Named output_name;
-   Settings.document_channel = open_out output_name;}
+  {document_type = io.output.document_type;
+   document_filename = Named output_name;
+   document_channel = open_out output_name;}
+
+let module_of_input inp = match inp.document_filename with
+  | Named fname ->
+      String.capitalize (Filename.chop_extension (Filename.basename fname))
+  |_ -> assert false
+
+let modules_of_input_documents () =
+  List.map module_of_input (input_documents ())
 
