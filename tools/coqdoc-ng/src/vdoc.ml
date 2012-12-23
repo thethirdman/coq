@@ -62,7 +62,7 @@ let transform outc default_fun cst =
     | _ -> assert false end
 
 (** This function prints into an output file a vdoc *)
-let rec write_file mod_name output cst_list =
+let rec file_to_file mod_name output cst_list =
     let outc = Settings.output_channel output in
     let pr_doc = transform outc (fun s -> "fixme") in
     let print = output_string outc in
@@ -78,13 +78,13 @@ let rec write_file mod_name output cst_list =
     print (Formatter.footer ())
 
 (** When the output is a directory, we generate the set of output files
- * based on each input file, and then we use write_file *)
-let write_dir dirname resolved_inputs =
+ * based on each input file, and then we use file_to_file*)
+let files_to_dir dirname resolved_inputs =
   let aux input_file cst_lst =
-    let output_file = Settings.make_output_from_input dirname input_file in
-    write_file (Settings.module_of_input input_file) output_file cst_lst in
+    let output_file = Settings.make_output_from_input dirname (fst input_file) in
+    file_to_file (snd input_file) output_file cst_lst in
 
-  List.iter2 aux (Settings.input_documents ()) resolved_inputs
+  List.iter2 aux (Settings.module_list ()) resolved_inputs
 
 (** This function handle the generation of the documentation
  * from a list of Cst. For each output file, the associated list of cst
@@ -92,9 +92,18 @@ let write_dir dirname resolved_inputs =
 let generate_doc resolved_inputs =
   let out_document = Settings.output_document () in
   match Settings.output_filename out_document with
-  | Settings.Directory dirname -> write_dir dirname resolved_inputs
+  | Settings.Directory dirname -> files_to_dir dirname resolved_inputs
   | other ->
-      write_file (List.hd (Settings.modules_of_input_documents ()))
-        (Settings.output_document ()) (List.flatten resolved_inputs)
+      begin match resolved_inputs with
+      | [] -> assert false
+      | [one_file] ->
+          file_to_file (Settings.module_of_input
+          (List.hd (Settings.input_documents ())))
+          (Settings.output_document ()) one_file
+      | many_files ->
+          List.iter2 (fun file libname ->
+            file_to_file (snd libname) (Settings.output_document ()) file)
+            many_files (Settings.module_list ())
+      end
 
 end

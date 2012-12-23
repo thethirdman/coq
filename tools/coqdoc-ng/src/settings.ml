@@ -119,8 +119,7 @@ let load_input_document fname =
   raise e
 
 let load_output_document fname =
-  if Sys.file_exists fname then
-    if Sys.is_directory fname then
+  if Sys.file_exists fname && Sys.is_directory fname then
       let doc = {document_type = OHTML;
               document_filename = Directory fname;
               document_channel = stdout;} in (** default value *)
@@ -132,8 +131,6 @@ let load_output_document fname =
                document_channel = open_out fname;} in
       io.output <- doc
   with (Sys_error _) as e -> raise e
-  else
-    raise (Invalid_argument ("File does not exists: " ^ fname))
 
 let load_input_document fname =
   io.input <- (load_input_document fname) :: io.input
@@ -300,11 +297,19 @@ let make_output_from_input dirname input_file =
    document_filename = Named output_name;
    document_channel = open_out output_name;}
 
-let module_of_input inp = match inp.document_filename with
-  | Named fname ->
-      String.capitalize (Filename.chop_extension (Filename.basename fname))
-  |_ -> assert false
 
-let modules_of_input_documents () =
-  List.map module_of_input (input_documents ())
+let module_list =
+  let lst = ref [] in
+  let aux inp = match inp.document_filename with
+    | Named fname ->
+        String.capitalize (Filename.chop_extension (Filename.basename fname))
+    | Anonymous -> ""
+    |_ -> assert false
+  in
+  (fun () ->
+    if !lst = [] then
+      lst := List.map (fun inp -> (inp,aux inp)) (input_documents ());
+    !lst)
 
+let module_of_input inp =
+  snd (List.find (fun e -> inp = (fst e)) (module_list ()))

@@ -59,14 +59,14 @@ let frontend () = match Settings.input_type () with
 *)
 let resolve_coqtop_interaction _ct inputs =
   (** For each input, we evaluate the cst list (a sequence of cst's) *)
-
+  print_int (List.length (Settings.module_list ()));
   List.map2
   (fun mod_name input ->
-    Evaluate.open_coq_module _ct mod_name;
+    Evaluate.open_coq_module _ct (snd mod_name);
     let ret = List.map
       (fun cst -> Evaluate.eval_cst _ct (Settings.input_type ()) cst) input in
-    Evaluate.close_coq_module _ct mod_name; ret)
-  (Settings.modules_of_input_documents ()) inputs
+    Evaluate.close_coq_module _ct (snd mod_name); ret)
+    (Settings.module_list ()) inputs
 
 (** The role of the backend is to produce the final set of documents.
 
