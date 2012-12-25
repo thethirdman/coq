@@ -97,6 +97,7 @@ let io = {
 }
 
 let is_default_output = ref true
+let toc_only = ref false
 
 (** Load a document. *)
 let extension_of_filename fname =
@@ -154,6 +155,14 @@ let make_load_input_document fname =
   let inp = make_input_document fname in
   load_input_document inp
 
+let load_files_from fname =
+  let old_dir = Sys.getcwd () in Sys.chdir (Filename.dirname fname);
+  let i_chan = open_in fname in
+  try while true do
+    make_load_input_document (input_line i_chan)
+  done
+  with End_of_file -> Sys.chdir old_dir
+
 (* FIXME: make a real usage doc_string *)
 let usage = "This is coqdoc ...\n\n" ^
             "Usage: " ^ Sys.argv.(0) ^ " [options] [files]\n"
@@ -182,6 +191,8 @@ let speclist = Arg.align [
   " Consider file as a .v file ");
   ("-o", Arg.String (fun s -> load_output_document s),
    " Specify output file. If unspecified, default output will be stdout.");
+   ("--files-from", Arg.String (fun s -> load_files_from s),
+   " Read input file names to process from file");
 
   ("-d", Arg.String (fun s ->
     if Sys.file_exists s && Sys.is_directory s then load_output_directory s
@@ -203,6 +214,9 @@ let speclist = Arg.align [
     {document_type = OHTML; document_filename = Anonymous;
      document_channel = stdout;}),
    " Prints the generated document on standard output");
+
+ ("--toc", Arg.Set toc_only,
+  "Only outputs the table of contents");
   ]
 
 let print_help_if_required () =

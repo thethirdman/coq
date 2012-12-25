@@ -66,16 +66,22 @@ let rec file_to_file mod_name output cst_list =
     let outc = Settings.output_channel output in
     let pr_doc = transform outc (fun s -> "fixme") in
     let print = output_string outc in
-    print (Formatter.header mod_name);
-    List.iter pr_doc cst_list;
-    handle_context outc `None;
+    if not !Settings.toc_only then
+      begin
+        print (Formatter.header mod_name);
+        List.iter pr_doc cst_list;
+        handle_context outc `None
+      end;
+
     print (Formatter.index (List.map Hyperlinks.link_of_symbol
       (Hyperlinks.get_id_of_module mod_name)));
     print (Formatter.file_index
       (List.map (fun file -> match Settings.input_filename file with
           Settings.Named s -> (s,mod_name)
           |_ -> assert false) (Settings.input_documents ())));
-    print (Formatter.footer ())
+
+    if not !(Settings.toc_only) then
+      print (Formatter.footer ())
 
 (** When the output is a directory, we generate the set of output files
  * based on each input file, and then we use file_to_file*)

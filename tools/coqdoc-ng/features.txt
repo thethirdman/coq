@@ -6,8 +6,6 @@ Major :
   --dvi                output the DVI
   --ps                 output the PostScript
   --pdf                output the Pdf
-  --toc                output a table of contents
-  --files-from <file>  read file names to process in <file>
 ¹ --no-externals       no links to Coq standard library
 ? --external <url> <d> set URL for external library d
   --latin1             set ISO-8859-1 input language
@@ -56,3 +54,5 @@ DONE:
   -d <dir>             output files into directory <dir>
   --vernac <file>      consider <file> as a .v file
   --tex <file>         consider <file> as a .tex file
+  --files-from <file>  read file names to process in <file>
+  --toc                output a table of contents
