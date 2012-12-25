@@ -215,8 +215,10 @@ let speclist = Arg.align [
      document_channel = stdout;}),
    " Prints the generated document on standard output");
 
- ("--toc", Arg.Set toc_only,
-  "Only outputs the table of contents");
+  ("--toc", Arg.Set toc_only,
+    "Only outputs the table of contents");
+  ("--no-externals", Arg.Clear Hyperlinks.show_stdlib,
+  "Do not print links to Coq standard library");
   ]
 
 let print_help_if_required () =

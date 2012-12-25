@@ -46,6 +46,8 @@ let link_of_symbol sym =
 
 let symbol_table = ref (Symbol_set.empty)
 
+let show_stdlib = ref true
+
 let add_symbol symbol =
   let symbol = match symbol with "Top"::l -> l | other -> other in
   symbol_table := Symbol_set.add symbol !symbol_table
@@ -79,17 +81,24 @@ let make_hyperlink ct id_str =
   | None -> None (* no reference has been found *)
   | Some absolute_path ->
       let sym = Symbol.make absolute_path in
+      let is_stdlib = Symbol.is_stdlib sym in
       if Symbol_set.mem sym !symbol_table then
       (* The id already exists in id_index, we return a link *)
-        Some (Link
-            {is_stdlib = Symbol.is_stdlib sym;
+        if is_stdlib && not !show_stdlib then
+          None
+        else
+          Some (Link
+            {is_stdlib = is_stdlib;
              adress = sym;
              content = id_str;})
       else (* The id has just been declared *)
         begin
           add_symbol sym;
-          Some (Root
-              {is_stdlib = Symbol.is_stdlib sym;
+          if is_stdlib && not !show_stdlib then
+            None
+          else
+            Some (Root
+              {is_stdlib = is_stdlib;
                adress = sym;
                content = id_str;})
         end

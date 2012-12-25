@@ -545,8 +545,8 @@ $(FAKEIDE): lib/xml_lexer$(BESTOBJ) lib/xml_parser$(BESTOBJ) lib/xml_utils$(BEST
 MENHIRLIB=`ocamlfind query menhirLib`/
 NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo \
 			 lib/pp_control.cmo lib/xml_utils.cmo lib/xml_pp.cmo lib/pp.cmo \
-	$(addprefix tools/coqdoc-ng/src/, utils.cmo coqtop_handle.cmo settings.cmo cst.cmo   \
-	hyperlinks.cmo annotations.cmo evaluate.cmo doc_lexer.cmo html.cmo \
+	$(addprefix tools/coqdoc-ng/src/, utils.cmo coqtop_handle.cmo cst.cmo   \
+	hyperlinks.cmo settings.cmo annotations.cmo evaluate.cmo doc_lexer.cmo html.cmo \
 	vernac_lexer.cmo parser.cmo vdoc.cmo coqdoc.cmo)
 
 tools/coqdoc-ng/src/parser.ml tools/coqdoc-ng/src/parser.mli:
