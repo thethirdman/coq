@@ -6,9 +6,6 @@ Major :
   --dvi                output the DVI
   --ps                 output the PostScript
   --pdf                output the Pdf
-  --stdout             write output to stdout
-  -o <file>            write output in file <file>
-  -d <dir>             output files into directory <dir>
   --toc                output a table of contents
   --vernac <file>      consider <file> as a .v file
   --tex <file>         consider <file> as a .tex file
@@ -54,3 +51,8 @@ Minor:
 ¹ -> comment distinguer une url de coq d'une url du fichier d'entrée ?
 ² -> generalize to multiple files ?
 ³ -> useless ?
+
+DONE:
+  -o <file>            write output in file <file>
+  --stdout             write output to stdout
+  -d <dir>             output files into directory <dir>

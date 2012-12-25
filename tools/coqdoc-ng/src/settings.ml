@@ -96,6 +96,8 @@ let io = {
   input_type = IVernac;
 }
 
+let is_default_output = ref true
+
 (** Load a document. *)
 let extension_of_filename fname =
   let reg = Str.regexp "\\." in
@@ -118,13 +120,26 @@ let load_input_document fname =
   (* FIXME: Use a standardize way of raising fatal errors. *)
   raise e
 
+let load_output_directory fname =
+  if not !is_default_output then
+    raise (Invalid_argument ("Error: I cannot have multiple file as an ouput."
+      ^ "please specify only one file or a directory"))
+  else
+    is_default_output := false;
+  let doc = {document_type = OHTML;
+            document_filename = Directory fname;
+            document_channel = stdout;} in (** default value *)
+  io.output <- doc
+
 let load_output_document fname =
+  if not !is_default_output then
+    raise (Invalid_argument ("Error: I cannot have multiple file as an ouput."
+      ^ "please specify only one file or a directory"))
+  else
+    is_default_output := false;
   if Sys.file_exists fname && Sys.is_directory fname then
-      let doc = {document_type = OHTML;
-              document_filename = Directory fname;
-              document_channel = stdout;} in (** default value *)
-      io.output <- doc
-    else
+      load_output_directory fname
+  else
     try
       let doc = {document_type = OHTML (* FIXME *);
                document_filename = Named fname;
@@ -154,6 +169,13 @@ let speclist = Arg.align [
 
   ("-o", Arg.String (fun s -> load_output_document s),
    " Specify output file. If unspecified, default output will be stdout.");
+
+  ("-d", Arg.String (fun s ->
+    if Sys.file_exists s && Sys.is_directory s then load_output_directory s
+    else raise (Invalid_argument ("Error: the file " ^ s ^ " does not exists or"
+    ^ "is not a directory"))),
+    " Specify output directory. Generates a file for each input file, with"
+    ^ "the same basename");
 
   ("--html", Arg.Unit (fun () -> io.output.document_type <- OHTML),
    " Produce a HTML document (default).");
