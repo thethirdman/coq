@@ -106,7 +106,7 @@ let extension_of_filename fname =
     (Str.string_after fname off)
   with Not_found -> "(no extension)"
 
-let load_input_document fname =
+let make_input_document fname =
   if Sys.is_directory fname then
     {document_filename = Directory fname;
       document_channel = stdin; (** default value *)
@@ -147,8 +147,12 @@ let load_output_document fname =
       io.output <- doc
   with (Sys_error _) as e -> raise e
 
-let load_input_document fname =
-  io.input <- (load_input_document fname) :: io.input
+let load_input_document inp =
+  io.input <- inp :: io.input
+
+let make_load_input_document fname =
+  let inp = make_input_document fname in
+  load_input_document inp
 
 (* FIXME: make a real usage doc_string *)
 let usage = "This is coqdoc ...\n\n" ^
@@ -166,7 +170,16 @@ let print_help =
 let speclist = Arg.align [
   ("-h", Arg.Set print_help,
    " Print this help message and exit.");
-
+  ("--vernac", Arg.String (fun fname ->
+      try load_input_document { document_filename = Named fname;
+      document_channel = open_in fname; document_type = IVernac; }
+      with (Sys_error _) as e -> raise e),
+  " Consider file as a .v file ");
+  ("--tex", Arg.String (fun fname ->
+      try load_input_document { document_filename = Named fname;
+      document_channel = open_in fname; document_type = ICoqTeX; }
+      with (Sys_error _) as e -> raise e),
+  " Consider file as a .v file ");
   ("-o", Arg.String (fun s -> load_output_document s),
    " Specify output file. If unspecified, default output will be stdout.");
 
@@ -201,7 +214,7 @@ let print_help_if_required () =
 (** Load requested inputs. *)
 let parse_anon = function
   | s when Sys.file_exists s ->
-        load_input_document s
+        make_load_input_document s
   | x ->
     raise (Arg.Bad ("Invalid argument: " ^ x))
 
