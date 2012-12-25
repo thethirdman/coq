@@ -59,7 +59,6 @@ let frontend () = match Settings.input_type () with
 *)
 let resolve_coqtop_interaction _ct inputs =
   (** For each input, we evaluate the cst list (a sequence of cst's) *)
-  print_int (List.length (Settings.module_list ()));
   List.map2
   (fun mod_name input ->
     Evaluate.open_coq_module _ct (snd mod_name);

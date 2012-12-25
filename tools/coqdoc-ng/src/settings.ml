@@ -163,6 +163,11 @@ let speclist = Arg.align [
 
   ("--pp", Arg.Unit (fun () -> io.output.document_type <- OPrettyPrint),
    " Produce a LaTeX document.");
+
+  ("--stdout", Arg.Unit (fun () -> io.output <-
+    {document_type = OHTML; document_filename = Anonymous;
+     document_channel = stdout;}),
+   " Prints the generated document on standard output");
   ]
 
 let print_help_if_required () =
@@ -246,7 +251,7 @@ let check_input_output () =
             let new_files = ref [] in
             let files = Sys.readdir dirname in
             for i = 0 to Array.length files - 1 do
-              let cur_file = files.(i) in
+              let cur_file = dirname ^ "/" ^ files.(i) in
               let ext = extension_of_frontend_type io.input_type in
               (** For each file in the dir, if it has a good extension *)
               if (ext = (extension_of_filename cur_file))
