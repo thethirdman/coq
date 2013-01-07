@@ -20,7 +20,7 @@ let initialize () =
  * comments and documentation.
  * A different evaluation will be applied on each of those types *)
 let vernac_parser =
-  (MenhirLib.Convert.Simplified.traditional2revised Parser.parse_vernac)
+  (Convert.Simplified.traditional2revised Parser.parse_vernac)
 
 (** The second parser parses the documentation into a abstract representation
  *)

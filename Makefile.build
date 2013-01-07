@@ -542,10 +542,9 @@ $(FAKEIDE): lib/xml_lexer$(BESTOBJ) lib/xml_parser$(BESTOBJ) lib/xml_utils$(BEST
 
 # Coqdoc-ng specific rules
 
-MENHIRLIB=`ocamlfind query menhirLib`/
 NGCMO= lib/xml_lexer.cmo lib/xml_parser.cmo lib/serialize.cmo \
 			 lib/pp_control.cmo lib/xml_utils.cmo lib/xml_pp.cmo lib/pp.cmo \
-	$(addprefix tools/coqdoc-ng/src/, utils.cmo coqtop_handle.cmo cst.cmo   \
+	$(addprefix tools/coqdoc-ng/src/, utils.cmo coqtop_handle.cmo convert.cmo cst.cmo   \
 	hyperlinks.cmo settings.cmo annotations.cmo evaluate.cmo doc_lexer.cmo html.cmo \
 	vernac_lexer.cmo parser.cmo vdoc.cmo coqdoc.cmo)
 
@@ -555,15 +554,15 @@ tools/coqdoc-ng/src/parser.ml tools/coqdoc-ng/src/parser.mli:
 
 tools/coqdoc-ng/src/coqdoc.cmo: tools/coqdoc-ng/src/coqdoc.ml
 	$(SHOW)'coqdoc cmo'
-	$(HIDE)$(OCAMLC) -c $(MLINCLUDES) -I $(MENHIRLIB) $(BYTEFLAGS) $<
+	$(HIDE)$(OCAMLC) -c $(MLINCLUDES) $(BYTEFLAGS) $<
 
 tools/coqdoc-ng/src/coqdoc.cmx: tools/coqdoc-ng/src/coqdoc.ml
 	$(SHOW)'coqdoc cmo'
-	$(OCAMLOPT) -c -I $(MENHIRLIB) $(MLINCLUDES) $(OPTFLAGS) $<
+	$(OCAMLOPT) -c $(MLINCLUDES) $(OPTFLAGS) $<
 
 bin/coqdoc-ng: $(patsubst %.cma,%$(BESTLIB),$(NGCMO:.cmo=$(BESTOBJ)))
 	$(SHOW)'OCAMLBEST -o $@'
-	$(call bestocaml, $(MENHIRLIB)menhirLib$(BESTOBJ), unix str)
+	$(call bestocaml,, unix str)
 
 # Special rule for the compatibility-with-camlp5 extension for camlp4
 
