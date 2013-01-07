@@ -62,22 +62,22 @@ let transform outc default_fun cst =
     | _ -> assert false end
 
 (** This function prints into an output file a vdoc *)
-let rec file_to_file mod_name output cst_list =
+let rec file_to_file libname output cst_list =
     let outc = Settings.output_channel output in
-    let pr_doc = transform outc (fun s -> "fixme") in
+    let pr_doc = transform output libname (fun s -> "fixme") in
     let print = output_string outc in
     if not !Settings.toc_only then
       begin
-        print (Formatter.header mod_name);
+        print (Formatter.header libname);
         List.iter pr_doc cst_list;
         handle_context outc `None
       end;
 
     print (Formatter.index (List.map Hyperlinks.link_of_symbol
-      (Hyperlinks.get_id_of_module mod_name)));
+      (Hyperlinks.get_id_of_module libname)));
     print (Formatter.file_index
       (List.map (fun file -> match Settings.input_filename file with
-          Settings.Named s -> (s,mod_name)
+          Settings.Named s -> (s,libname)
           |_ -> assert false) (Settings.input_documents ())));
 
     if not !(Settings.toc_only) then

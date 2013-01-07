@@ -20,7 +20,7 @@ o 0.1: Squelette
         - mettre opt_map et string_forall dans lib/
         - debug dans links.v: après une liste, (un|des) sauts de lignes en trop
         - améliorer la gestion d'erreurs dans les options
-[TODO]
+[DONE]
 o 0.1: Version préliminaire
       -> Possède juste la traduction .v -> .html
       -> Faire la séparation logique entre les core features et les minor

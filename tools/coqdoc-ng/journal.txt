@@ -2,6 +2,17 @@
 | Development journal for coqdoc project |
 ------------------------------------------
 
+07/01/13
+
+  - La base de coqdoc est posée depuis avant les vacances. Il reste
+    quelques finitions à faire (bugfixes et rendu).
+  - Coqdoc possède quelques ralentissements. Il faut determiner si c'est les
+    nombreuses interactions avec coqtop, ou si c'est juste mon code
+    (notamment l'utilisation de List.flatten à divers endroits)
+  - Continuer sur les core features
+  - --toc ?
+  - commentaire au milieu de code
+
 28/11/12
 
 Ce qu'il reste à faire pour lundi

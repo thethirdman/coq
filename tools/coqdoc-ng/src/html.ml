@@ -21,11 +21,6 @@ let header title =
   "<div id=\"main\">\n\n" ^
   "<h1>" ^ title ^ "</h1>\n<hr/>\n\n"
 
-let rec print_with_sep sep = function
-  [] -> ""
-  | [e] -> e
-  | e::l -> sprintf "%s%s%s" e sep (print_with_sep sep l)
-
 let pr_raw raw =
   if raw.html <> "" then raw.html
   else raw.default
@@ -47,8 +42,8 @@ let doc cst =
   let rec print_rec_element = function
     | `Emphasis d      -> (sprintf "<i>%s</i>" (print_no_eval d))
     | `List lst        -> sprintf "<ul>%s</ul>"
-      (print_with_sep "" (List.map print_no_eval lst))
-    | `Seq lst -> print_with_sep "" (List.map print_no_eval lst)
+      (String.concat "" (List.map print_no_eval lst))
+    | `Seq lst -> String.concat "" (List.map print_no_eval lst)
     | `Item doc -> sprintf "<li>%s</li>" (print_no_eval doc)
     | _ -> raise Unhandled_case
 
