@@ -21,7 +21,10 @@ module Symbol = struct
           ret
 
    (** Make a Symbol.t from a string *)
-   let make str = Str.split (Str.regexp "\\.") str
+   let make str =
+     match Str.split (Str.regexp "\\.") str with
+      | "Top"::rest -> rest
+      | other -> other
 
    (** Checks wheter a given symbol is located in coq's standard library *)
    let is_stdlib = function
@@ -49,7 +52,6 @@ let symbol_table = ref (Symbol_set.empty)
 let show_stdlib = ref true
 
 let add_symbol symbol =
-  let symbol = match symbol with "Top"::l -> l | other -> other in
   symbol_table := Symbol_set.add symbol !symbol_table
 
 (**let find_symbol symbol =
