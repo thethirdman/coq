@@ -55,13 +55,22 @@ let doc cst =
         (replace_newlines (print_no_eval cst))
     with Unhandled_case -> None
 
-let pr_link link_type link =
-  let normalize name = String.concat "_" (List.tl name) in
+(** This function prints a link. Libname is the string corresponding to
+ * the current lib being printed (in order to know if it is a local link or
+ * not. *)
+let pr_link libname link_type link =
+  let normalize name = String.concat "_" name in
   match link_type with
     | `Root ->
       sprintf "<a id=\"%s\">%s</a>" (normalize link.adress) link.content
     | `Link ->
-        sprintf "<a href=\"#%s\">%s</a>" (normalize link.adress) link.content
+        if (is_local libname link.adress) && (not link.is_stdlib) then
+          sprintf "local<a href=\"#%s\">%s</a>" (normalize link.adress) link.content
+        else
+          (** If the link is not local, we get the output file of the module *)
+          sprintf "<a href=\"%s#%s\">%s</a>" (Settings.output_name_of_module
+          (List.hd link.adress))
+                  (normalize link.adress) link.content
 
 let indent id_lvl =
   let str = "&nbsp;" and tab_size = 4 and ret = ref "" in
@@ -74,7 +83,8 @@ let indent id_lvl =
     !ret
     end
 
-let code c =
+(** Libname is the name of the lib being printed *)
+let code libname c =
   let rec aux = function
   Keyword s ->   sprintf "<span class=\"id\" type=\"keyword\">%s</span>" s
   | Ident s ->   sprintf "<span class=\"id\" type=\"var\">%s</span>" s
@@ -82,8 +92,8 @@ let code c =
   | Tactic s -> sprintf  "<span class=\"id\" type=\"inductive\">%s</span>" s
   | Symbol s -> sprintf "<span class=\"id\" type=\"lemma\">%s</span>" s
   | NoFormat s -> s
-  | Root l -> pr_link `Root l
-  | Link l -> pr_link `Link l
+  | Root l -> pr_link libname `Root l
+  | Link l -> pr_link libname `Link l
   | Output_command (raw,[]) -> pr_raw raw
   | Output_command (raw,args) -> String.concat (pr_raw raw) args
   | Indent (size,code) -> (indent size) ^ (aux code)
@@ -101,8 +111,8 @@ let newline () = "<br />"
 (*FIXME*)
 let index lst =
   sprintf "<h1>Index of symbols</h1><br/>\n<hr/>\n<ul>\n%s</ul>\n"
-    (String.concat "" (List.map (fun e -> sprintf "<li>%s</li>\n" (pr_link `Link
-    e)) lst))
+    (String.concat "" (List.map (fun e -> sprintf "<li>%s</li>\n"
+    (pr_link "" `Link e)) lst))
 
 let file_index lst =
   sprintf "<h1>Index of files</h1><br/>\n<hr/>\n<ul>\n%s</ul>\n"

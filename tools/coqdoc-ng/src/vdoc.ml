@@ -6,6 +6,12 @@
 open Cst
 open Printf
 
+let is_local libname link =
+  if List.length (Settings.module_list ()) = 1 then
+    true
+  else
+    libname = (List.hd link)
+
 (** Set of core functions that each backend has to implement *)
 module Backend =
   functor (Formatter :
@@ -15,7 +21,7 @@ module Backend =
       val doc        : Cst.doc_no_eval -> string option
       val begindoc   : unit -> string
       val enddoc     : unit -> string
-      val code       : Cst.code list   -> string list
+      val code       : string -> Cst.code list   -> string list
       val begincode  : unit -> string
       val endcode    : unit -> string
       val indent     : int     -> string (*FIXME: not used right now*)
@@ -46,7 +52,7 @@ let handle_context outc tok =
       if !context <> `None then (context := `None; "</div>")
       else "")
 
-let transform outc default_fun cst =
+let transform outc libname default_fun cst =
   begin match cst with
     Cst.Doc d ->
       if d <> `Content "" then
@@ -57,14 +63,15 @@ let transform outc default_fun cst =
           output_string outc (Formatter.newline ())
         end
     | Cst.Code c -> handle_context outc `Code;
-        List.iter (output_string outc) (Formatter.code c);
+        List.iter (output_string outc) (Formatter.code libname c);
         output_string outc (Formatter.newline ())
     | _ -> assert false end
+
 
 (** This function prints into an output file a vdoc *)
 let rec file_to_file libname output cst_list =
     let outc = Settings.output_channel output in
-    let pr_doc = transform outc (fun s -> "fixme") in
+    let pr_doc = transform outc libname (fun s -> "fixme") in
     let print = output_string outc in
     if not !Settings.toc_only then
       begin
@@ -76,9 +83,9 @@ let rec file_to_file libname output cst_list =
     print (Formatter.index (List.map Hyperlinks.link_of_symbol
       (Hyperlinks.get_id_of_module libname)));
     print (Formatter.file_index
-      (List.map (fun file -> match Settings.input_filename file with
-          Settings.Named s -> (s,libname)
-          |_ -> assert false) (Settings.input_documents ())));
+      (List.map (fun (file,name) -> match Settings.input_filename file with
+          Settings.Named s -> (s,name)
+          |_ -> assert false) (Settings.module_list ())));
 
     if not !(Settings.toc_only) then
       print (Formatter.footer ())
@@ -103,7 +110,7 @@ let generate_doc resolved_inputs =
       begin match resolved_inputs with
       | [] -> assert false
       | [one_file] ->
-          file_to_file (Settings.module_of_input
+          file_to_file (Settings.module_from_input
           (List.hd (Settings.input_documents ())))
           (Settings.output_document ()) one_file
       | many_files ->

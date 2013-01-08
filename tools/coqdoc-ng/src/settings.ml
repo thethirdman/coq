@@ -354,6 +354,10 @@ let make_output_from_input dirname input_file =
    document_channel = open_out output_name;}
 
 
+(** This function generate the list of (module_name, input),
+ * it enables the obtention of a module name (a string) from an input type.
+ * This allows to keep the physical file structure inside coqdoc.
+ *)
 let module_list =
   let lst = ref [] in
   let aux inp = match inp.document_filename with
@@ -367,5 +371,29 @@ let module_list =
       lst := List.map (fun inp -> (inp,aux inp)) (input_documents ());
     !lst)
 
-let module_of_input inp =
+(** Takes an input and returns its corresponding module name *)
+let module_from_input inp =
   snd (List.find (fun e -> inp = (fst e)) (module_list ()))
+
+(** Takes a module name and returns its corresponding input *)
+let input_from_module m =
+  fst (List.find (fun e -> m = (snd e)) (module_list ()))
+
+(** This function takes an input module and gives the name of the corresponding
+ * output file, or an empty string if it is empty. *)
+let output_name_of_module m =
+  match io.output.document_filename with
+    (** if the output type is a directory, we generate a new output using
+     * the input type, in order to obtain the name of this output module *)
+    | Directory d ->
+        begin try
+          begin match
+            (make_output_from_input d (input_from_module m)).document_filename
+          with
+            Named s -> s
+            |_ -> assert false
+          end
+        with Not_found -> ""
+        end
+    | Anonymous -> ""
+    | Named n -> n
