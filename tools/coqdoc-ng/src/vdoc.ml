@@ -64,7 +64,7 @@ let transform outc default_fun cst =
 (** This function prints into an output file a vdoc *)
 let rec file_to_file libname output cst_list =
     let outc = Settings.output_channel output in
-    let pr_doc = transform output libname (fun s -> "fixme") in
+    let pr_doc = transform outc (fun s -> "fixme") in
     let print = output_string outc in
     if not !Settings.toc_only then
       begin

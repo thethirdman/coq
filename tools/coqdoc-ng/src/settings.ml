@@ -127,7 +127,7 @@ let load_output_directory fname =
       ^ "please specify only one file or a directory"))
   else
     is_default_output := false;
-  let doc = {document_type = OHTML;
+  let doc = {document_type = io.output.document_type;
             document_filename = Directory fname;
             document_channel = stdout;} in (** default value *)
   io.output <- doc
@@ -142,7 +142,7 @@ let load_output_document fname =
       load_output_directory fname
   else
     try
-      let doc = {document_type = OHTML (* FIXME *);
+      let doc = {document_type = io.output.document_type (* FIXME *);
                document_filename = Named fname;
                document_channel = open_out fname;} in
       io.output <- doc

@@ -56,7 +56,7 @@ let doc cst =
     with Unhandled_case -> None
 
 let pr_link link_type link =
-  let normalize name = (List.nth name ((List.length name) -1)) in
+  let normalize name = String.concat "_" (List.tl name) in
   match link_type with
     | `Root ->
       sprintf "<a id=\"%s\">%s</a>" (normalize link.adress) link.content
@@ -85,7 +85,7 @@ let code c =
   | Root l -> pr_link `Root l
   | Link l -> pr_link `Link l
   | Output_command (raw,[]) -> pr_raw raw
-  | Output_command (raw,args) -> print_with_sep (pr_raw raw) args
+  | Output_command (raw,args) -> String.concat (pr_raw raw) args
   | Indent (size,code) -> (indent size) ^ (aux code)
   in (List.map replace_newlines (List.map aux c))
 
