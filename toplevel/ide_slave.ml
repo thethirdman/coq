@@ -286,7 +286,7 @@ let locate s =
       (Libnames.string_of_path
         (Nametab.path_of_global
           (Smartlocate.smart_global
-            (Misctypes.AN (Libnames.Ident (Loc.ghost,(Names.id_of_string
+            (Misctypes.AN (Libnames.Qualid (Loc.ghost,(Libnames.qualid_of_string
             s)))))))
   with Loc.Exc_located (_,Nametab.GlobalizationError q) -> None
 
