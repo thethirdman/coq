@@ -81,7 +81,8 @@ let backend resolved_inputs =
     match Settings.output_type (Settings.output_document ()) with
     | Settings.OHTML -> let module Out = Vdoc.Backend(Html) in
       Out.generate_doc resolved_inputs
-    | Settings.OLaTeX -> assert false
+    | Settings.OLaTeX -> let module Out = Vdoc.Backend(Latex) in
+      Out.generate_doc resolved_inputs
     | Settings.OPrettyPrint -> assert false
 
 open Coqtop_handle

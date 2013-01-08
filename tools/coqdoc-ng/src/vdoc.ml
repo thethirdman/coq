@@ -48,9 +48,13 @@ let handle_context outc tok =
     if !context = `Code then endcode () ^ begindoc ()
     else if !context = `None then begindoc ()
     else "" in context := `Doc; ret
-  | `None ->
-      if !context <> `None then (context := `None; "</div>")
-      else "")
+  | `None -> begin
+      let ret = match !context with
+        `Code -> endcode ()
+      | `Doc -> enddoc ()
+      | `None -> "" in
+      context := `None; ret
+      end)
 
 let transform outc libname default_fun cst =
   begin match cst with
