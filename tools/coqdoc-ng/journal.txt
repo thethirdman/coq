@@ -11,7 +11,14 @@
     (notamment l'utilisation de List.flatten à divers endroits)
   - Continuer sur les core features
   - --toc ?
-  - commentaire au milieu de code
+  - commentaire au milieu de code dans un .v
+  - file.v+ -> file._ :
+    il faut avoir une distinction pour chaque fichier de sortie dans le backend,
+    afin de pouvoir générer un titre pour chaque fichier d'entrée dans le
+    document de sortie sans regénérer un header à chaque fois.
+    J'ai l'intuition qu'il y a une jolie façon de faire ça, mais elle ne me
+    vient pas tout de suite
+
 
 28/11/12
 

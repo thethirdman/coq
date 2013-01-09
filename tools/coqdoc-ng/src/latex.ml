@@ -8,7 +8,7 @@ exception Unhandled_case
 
 let initialize () = ()
 
-let header _ =
+let header title =
       "\\documentclass[12pt]{report}\n" ^
       (**if !inputenc != "" then printf "\\usepackage[%s]{inputenc}\n" !inputenc;
         if !inputenc = "utf8x" then utf8x_extra_support ();*)
@@ -24,7 +24,10 @@ let header _ =
       "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" ^
       "%% This file has been automatically generated with the command\n" ^
       (** FIXME: detail the command line *)
-      "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n"
+      "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n" ^
+      "\\chapter{" ^ title ^ "}"
+
+let title_print title = "\\chapter{" ^ title ^ "}\n"
 
 let pr_raw raw =
   if raw.latex <> "" then raw.html
@@ -84,16 +87,9 @@ let pr_link libname link_type link =
           (Settings.output_name_of_module (List.hd link.adress))
           (normalize link.adress)
 
-let indent id_lvl =
-  let str = " " and tab_size = 4 and ret = ref "" in
-  if id_lvl = 0 then ""
-  else
-    begin
-      for i = 1 to tab_size * id_lvl do
-        ret := str ^ !ret
-      done;
-    !ret
-    end
+let rec indent id_lvl =
+  let tab_size = 4 in
+  String.make (id_lvl * tab_size) '~'
 
 (**let escape_chars str =
   let reg = Str.regexp "\\(#\\|$\\|%\\|&\\|~\\|_\\|^\\|\\\|{\\|}\\)" in
