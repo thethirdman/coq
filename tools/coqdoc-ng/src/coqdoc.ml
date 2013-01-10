@@ -83,7 +83,8 @@ let backend resolved_inputs =
       Out.generate_doc resolved_inputs
     | Settings.OLaTeX -> let module Out = Vdoc.Backend(Latex) in
       Out.generate_doc resolved_inputs
-    | Settings.OPrettyPrint -> assert false
+    | Settings.OPrettyPrint -> let module Out = Vdoc.Backend(Raw) in
+      Out.generate_doc resolved_inputs
 
 open Coqtop_handle
 (** Coqdoc is a composition of the passes described below. *)

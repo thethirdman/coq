@@ -6,6 +6,8 @@
 open Cst
 open Printf
 
+exception Unhandled_case
+
 let is_local libname link =
   if List.length (Settings.module_list ()) = 1 then
     true

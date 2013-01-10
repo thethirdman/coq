@@ -4,8 +4,6 @@ open Vdoc
 open Printf
 open Cst
 
-exception Unhandled_case
-
 
 let initialize () = ()
 

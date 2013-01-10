@@ -48,7 +48,7 @@ type backend_type =
 let extension_of_backend_type = function
   | OHTML -> ".html"
   | OLaTeX -> ".tex"
-  | OPrettyPrint -> ".pp"
+  | OPrettyPrint -> ".txt"
 
 (** Description of backend type. *)
 let string_of_backend_type = function
@@ -207,7 +207,7 @@ let speclist = Arg.align [
   ("--latex", Arg.Unit (fun () -> io.output.document_type <- OLaTeX),
    " Produce a LaTeX document.");
 
-  ("--pp", Arg.Unit (fun () -> io.output.document_type <- OPrettyPrint),
+  ("--raw", Arg.Unit (fun () -> io.output.document_type <- OPrettyPrint),
    " Produce a LaTeX document.");
 
   ("--stdout", Arg.Unit (fun () -> io.output <-
