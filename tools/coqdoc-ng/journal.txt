@@ -19,6 +19,7 @@
     J'ai l'intuition qu'il y a une jolie façon de faire ça, mais elle ne me
     vient pas tout de suite
   - FIXME: hyperliens
+  - coqtop pas dans path
 
 28/11/12
 
