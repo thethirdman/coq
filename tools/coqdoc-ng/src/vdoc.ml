@@ -34,10 +34,9 @@ module Backend =
     end) ->
 struct
 
-(* Output file generation function: takes a default function
-  * which will be called when Formatter.doc does not implement a rule
-  * for a cst node *)
-
+(* This function makes sure to never have a separation (such as
+ * "\end{doc}\begin{doc}" when printing to elements of the same type.
+ * This is necessary for a nice output *)
 let (context: [`None | `Code | `Doc] ref) = ref `None
 let handle_context outc tok =
   let open Formatter in
@@ -58,6 +57,9 @@ let handle_context outc tok =
       context := `None; ret
       end)
 
+(* Output file generation function: takes a default function
+  * which will be called when Formatter.doc does not implement a rule
+  * for a cst node *)
 let transform outc libname default_fun cst =
   begin match cst with
     Cst.Doc d ->

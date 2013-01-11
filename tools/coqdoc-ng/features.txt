@@ -1,8 +1,5 @@
 Major :
-  --html               produce a HTML document (default)
-  --latex              produce a LaTeX document
   --texmacs            produce a TeXmacs document
-  --raw                produce a text document
   --dvi                output the DVI
   --ps                 output the PostScript
   --pdf                output the Pdf
@@ -56,3 +53,6 @@ DONE:
   --files-from <file>  read file names to process in <file>
   --toc                output a table of contents
   --no-externals       no links to Coq standard library
+  --html               produce a HTML document (default)
+  --latex              produce a LaTeX document
+  --raw                produce a text document

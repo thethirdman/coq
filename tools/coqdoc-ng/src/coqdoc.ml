@@ -8,14 +8,6 @@
 let initialize () =
   Settings.parse ()
 
-(** The role of the frontend is to translate a set of input documents
-    written in plenty of formats into a common format that we call
-    Vdoc.
-
-    A Vdoc is a "glueing" document composed of two things: (i) fragments of
-    documents written the initial input format ; (ii) requests to coqtop.
-*)
-
 (** This is the first parser: it makes a logical separation between code,
  * comments and documentation.
  * A different evaluation will be applied on each of those types *)
@@ -43,6 +35,13 @@ let cst_of_vernac_input inp =
     done; assert false
   with Cst.End_of_file -> (List.rev !lst)
 
+(** The role of the frontend is to translate a set of input documents
+    written in plenty of formats into a common format that we call
+    Vdoc.
+
+    A Vdoc is a "glueing" document composed of two things: (i) fragments of
+    documents written the initial input format ; (ii) requests to coqtop.
+*)
 let frontend () = match Settings.input_type () with
     | Settings.IVernac ->
         (List.map cst_of_vernac_input (Settings.input_documents ()))

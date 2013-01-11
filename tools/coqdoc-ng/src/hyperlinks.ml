@@ -6,6 +6,8 @@
 open Coqtop_handle
 open Cst
 
+(** A symbol is a list of string, each element corresponding to a module
+ * the last element of the list being the symbol name *)
 module Symbol = struct
   type t = string list
 
@@ -34,6 +36,8 @@ end
 
 module Symbol_set = Set.Make(Symbol)
 
+(** This function is used in the backend, when want to print the index of
+ * symbols *)
 let link_of_symbol sym =
   let rec aux = function
     [] -> assert false
@@ -74,7 +78,7 @@ let get_id_of_module namespace =
  * been found
  *
  * FIXME: This is currently a naive implementation. There may be a way to
- * handle identifiers, calling only the locate command if necesary.
+ * handle identifiers, calling the locate command only if it is necesary.
  *)
 let make_hyperlink ct id_str =
   let open Cst in

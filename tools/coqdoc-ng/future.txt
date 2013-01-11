@@ -1,0 +1,42 @@
+Annotations.ml:
+  - La gestion des regles (la table code_rules, et la traduction faite par
+    doc_of_annot) n'est pas optimale: On travaille sur des listes, dans des
+    fonctions recursives, ce qui nous impose plusieurs List.flatten.
+    Il serait intéressant d'utiliser une autre structure de donnée de façon à
+    éviter ces List.flatten, pour faire la conversion qu'une fois tous les
+    traitement effectués.
+  - Tester la gestion des règles de traduction our les symboles
+  - rm_printing_rule ne supprime rien, elle se contente de shadow la règle
+    précédente
+
+Cst.ml:
+  - Dans un avenir proche, il serait intéressant d'enrichir le langage de
+    documentation. Il existe déjà pour cela un type query (géré du frontend
+    jusqu'à l'évaluation où il est transformé en chaîne simple), qui devrait
+    pouvoir permettre cela. Cela permettrait d'enrichir le langage de
+    "formattage" de la doc (on peut imaginer des liens vers des symbôles
+    définis, des liens hypertextes ou des images)
+  - `List et `Item sont sensés gérer les listes de la documentation. Pour
+    l'instant, les types ne sont pas optimaux puisque qu'une liste ne devrait
+    contenir que des types `Item ou des `List. Bien que le comportement
+    semble valide du frontend jusqu'à l'évaluation, on voudrait tout de même
+    un type plus restrictif
+
+Html.ml/Latex.ml/Raw.ml:
+  - Potentiellement, un peu de refactoring vers Vdoc.ml permettrait de limiter
+    les rendondances entre ces fichiers. Cependant, peut-être est il
+    préférable de laisser un contrôle total à l'utilisateur sur comment
+    formatter la documentation ou le code (plutôt que de l'obliger a fournir
+    une fonction pour chaque sous-type de doc_no_eval)
+  - Il reste divers ajustement cosmetiques à faire concernant les backends.
+    Quelle présentation veut-on pour le pdf ? pour la sortie texte ?
+
+Utils.ml:
+  - Deplacer opt_map dans la lib/clib de coq ?
+
+Vdoc.ml:
+  - les fonctions indent et newline ne sont pas utilisées du coté vdoc.
+    faut il les garder car c'est propre de faire de cette manière du coté
+    backend, ou devrait-on plutôt les supprimer ?
+
+

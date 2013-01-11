@@ -5,6 +5,7 @@
 open Settings
 open Coqtop_handle
 
+(** Unused for now, this is for `Query handling *)
 (** stores the defined symbols in coqdoc: primitives and user-defined
  * functions *)
 let symbol_table = () (* Hashtbl.create 42*)
@@ -13,8 +14,10 @@ type symbol = string
 type arglist = string list
 type query = (symbol * arglist)
 
-(** Show ? * default *)
-(** FIXME: real values *)
+(** This variable handles the "begin/end show/hide" defined in the old coqdoc
+ * the state is set/unset we reading the code. If the code is supposed to be
+ * hidden, the evaluation of the code will be avoided, returning instead
+ * and empty string *)
 let code_show = (ref true, true)
 
 
@@ -23,9 +26,12 @@ let code_show = (ref true, true)
  * locate identifiers and translate them into cst.doc and
  * hyperlinks if necessary *)
 let initialize_code_rules =
+  (** Singleton in order to add the rules only one time *)
   let initialized = ref false in
   (fun ct ->
   if not !initialized then
+    (** if we match an "id", we try to locate the symbol. If it works, it is
+     * an hyperlink, else it is nothing *)
     (let id_manage = (fun fallback args -> match args with
       | [Annotations.AString id] ->
           begin match Hyperlinks.make_hyperlink ct id with
@@ -72,8 +78,8 @@ and eval_doc : Cst.doc_with_eval -> Cst.doc_no_eval option = function
   | #Cst.eval_element as e -> eval_eval_element e
 
 and eval_full_doc cst =
-  match Utils.opt_map eval_doc [cst] with
-  [elt] -> elt
+  match eval_doc cst with
+  Some elt -> elt
   |_ -> `Content ""
 
 let eval_cst ct i_type = function
@@ -93,6 +99,8 @@ let eval_cst ct i_type = function
             | (a,b) -> raise (Invalid_argument ("when treating " ^ a ^ " " ^ b))
           end; Cst.Doc (`Content "")
 
+(** When we start the interpretation of an input file, we simulate the logical
+ * separation of the files inside coq by declaring a new module. *)
 let open_coq_module ct mod_name =
   let command = "Module " ^ mod_name ^ "." in
   ignore (Coqtop.interp ct Coqtop.null_logger command)

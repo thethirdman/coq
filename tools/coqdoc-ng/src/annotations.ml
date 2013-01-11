@@ -193,26 +193,37 @@ let _ =
   end
 
 (* The following section defines help function and a set of rules used for
- * translating printing rules defined by the user. *)
+ * translating printing comments defined by the user.
+ *
+ * It handles both the "rich" commands defined by the user, and the simple
+ * translation rules of the old coqdoc (such as -> becoming a \rightarrow) *)
 
 (** Tests if a given symbol matches the template (spaces arounds
  * the symbol are ignored) *)
+
+let cmp_symbol s match_elt =
+   (Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0)
+
 let cmp_command e match_elt =
   match e with
     ATag (Xml_pp.C_UnpTerminal, [AString s]) ->
-      Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) s 0
+      cmp_symbol s match_elt
     | _ -> false
 
-let cmp_symbol e match_elt =
-   (Str.string_match (Str.regexp (" *" ^ match_elt ^ " *")) e 0)
 
-(** Extract the metavars in order to generate the argument list given to
- * Output_command type *)
+(**
+ * For the commands, we want to extract the argument list given to the printing
+ * symbol.
+ * For instance, when printing a latex document, those are the arguments
+ * which will be given to the macro inside the latex document
+ *)
 let extract_metavars lst = List.fold_left
   (fun acc elt -> match elt with
     | ATag (Xml_pp.C_UnpMetaVar, [ATag (_,[AString s])]) -> s::acc
     |_ -> acc) [] lst
 
+(** We refine the add_rule function by taking a printing rule
+ *)
 let add_printing_rule pr =
   let open Cst in
   (** If the printing rule is translated into a command, the generated type
@@ -233,14 +244,22 @@ let add_printing_rule pr =
         -> [Cst.Output_command (pr.replace_with, [])]
       |_ -> fallback args)
 
+(** FIXME: we should really remove the printing rule instead of just
+ * shadowing it (but this would suppose comparing functions ?)
+ *
+ * We'd also like a more specific return type for the function given to
+ * add_rule. The naive approach would be to call fallback instead of returning
+ * a NoFormat, but this would call to rule we want to shadow *)
 let rm_printing_rule match_elt =
   add_rule Xml_pp.C_UnpTerminal
     (fun fallback args -> match args with
       [AString s] when cmp_symbol s match_elt -> [Cst.NoFormat match_elt]
-      | _ -> fallback args)                      (**FIXME: better type ? *)
+      | _ -> fallback args)
 
 let _ =
   let open Cst in
+  (** We now generate the translation rules for the symbols that are supposed
+   * to be translated automatically *)
   let default_symbols = [
     (* default symbol, latex, html *)
   ("\\*" ,     "\\ensuremath{\\times}",                  "");

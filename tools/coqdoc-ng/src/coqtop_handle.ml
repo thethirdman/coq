@@ -6,6 +6,7 @@ open Interface
 module Coqtop = struct
 
 exception Coqtop_crash
+exception Coqtop_fail of string
 
 (* Coqtop handle for communication with the toplevel *)
 type coqtop = {
@@ -24,8 +25,10 @@ let default_logger lvl msg = match lvl with
   | Warning -> print_string ("Warning: " ^ msg ^ "\n")
   | Error   -> print_string ("Error: " ^ msg ^ "\n")
 
+(** A dummy logger, in order to ignore the messages returned by coqtop *)
 let null_logger lvl msg = ignore lvl
 
+(** Function launching the coqtop process *)
 let open_process_pid prog args =
   let (ide2top_r,ide2top_w) = Unix.pipe () in
   let (top2ide_r,top2ide_w) = Unix.pipe () in
@@ -146,6 +149,6 @@ let prettyprint coqtop s  = eval_call coqtop default_logger
 (** Unboxes the value if no error happened *)
 let handle_value = function
   Interface.Good v | Interface.Unsafe v -> v
-  | Interface.Fail (loc,str) -> raise (Invalid_argument str)
+  | Interface.Fail (loc,str) -> raise (Coqtop_fail str)
 
 end

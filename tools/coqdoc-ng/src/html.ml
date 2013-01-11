@@ -8,7 +8,6 @@ open Cst
 let initialize () = ()
 
 let header title =
-  (*FIXME: add title and charset *)
   "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n"              ^
   "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"                  ^
   "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n"                   ^
@@ -102,11 +101,8 @@ let enddoc ()    = "</div>"
 let begincode () = "<div class=\"code\">"
 let endcode ()   = "</div>"
 
-(* FIXME: make real function *)
-
 let newline () = "<br />"
 
-(*FIXME*)
 let index lst =
   sprintf "<h1>Index of symbols</h1><br/>\n<hr/>\n<ul>\n%s</ul>\n"
     (String.concat "" (List.map (fun e -> sprintf "<li>%s</li>\n"
